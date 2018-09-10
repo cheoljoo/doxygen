@@ -2591,7 +2591,7 @@ QCString dateToString(bool includeTime)
       static bool warnedOnce=FALSE;
       if (!warnedOnce)
       {
-        warn_uncond("Environment variable SOURCE_DATA_EPOCH must have a value smaller than or equal to %llu; actual value %llu\n",UINT_MAX,epoch);
+        warn_uncond("Environment variable SOURCE_DATE_EPOCH must have a value smaller than or equal to %llu; actual value %llu\n",UINT_MAX,epoch);
         warnedOnce=TRUE;
       }
     }
@@ -2665,7 +2665,7 @@ Protection classInheritedProtectionLevel(ClassDef *cd,ClassDef *bcd,Protection p
   if (level==256)
   {
     err("Internal inconsistency: found class %s seem to have a recursive "
-        "inheritance relation! Please send a bug report to dimitri@stack.nl\n",cd->name().data());
+        "inheritance relation! Please send a bug report to doxygen@gmail.com\n",cd->name().data());
   }
   else if (cd->baseClasses())
   {
