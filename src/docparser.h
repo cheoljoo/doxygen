@@ -37,7 +37,7 @@ class SectionDict;
 QString::Direction getTextDirByConfig(const QString &text);
 QString::Direction getTextDirByConfig(const DocNode *node);
 QString::Direction getTextDirByConfig(const DocPara *para, int nodeIndex);
-QCString getDirHtmlClassOfNode(QString::Direction textDir, const char *initValue = NULL);
+QCString getDirHtmlClassOfNode(QString::Direction textDir, const QCString &initValue="");
 QCString getDirHtmlClassOfPage(QCString pageTitle);
 QCString getHtmlDirEmbedingChar(QString::Direction textDir);
 QCString getJsDirEmbedingChar(QString::Direction textDir);
@@ -140,7 +140,8 @@ class DocNode
                 Kind_HtmlBlockQuote = 49,
                 Kind_VhdlFlow       = 50,
                 Kind_ParBlock       = 51,
-                Kind_DiaFile        = 52
+                Kind_DiaFile        = 52,
+                Kind_Emoji          = 53
               };
     /*! Creates a new node */
     DocNode() : m_parent(0), m_insidePre(FALSE) {}
@@ -367,7 +368,9 @@ class DocStyleChange : public DocNode
                  Superscript   = (1<<6),
                  Preformatted  = (1<<7),
                  Span          = (1<<8),
-                 Div           = (1<<9)
+                 Div           = (1<<9),
+                 Strike        = (1<<10),
+                 Underline     = (1<<11)
                };
 
     DocStyleChange(DocNode *parent,uint position,Style s,bool enable,
@@ -452,7 +455,7 @@ class DocSymbol : public DocNode
                    /* doxygen commands mapped */
                    Sym_BSlash, Sym_At, Sym_Less, Sym_Greater, Sym_Amp,
                    Sym_Dollar, Sym_Hash, Sym_DoubleColon, Sym_Percent, Sym_Pipe,
-                   Sym_Quot, Sym_Minus, Sym_Plus, Sym_Dot
+                   Sym_Quot, Sym_Minus, Sym_Plus, Sym_Dot, Sym_Colon
                  };
     enum PerlType { Perl_unknown = 0, Perl_string, Perl_char, Perl_symbol, Perl_umlaut,
                     Perl_acute, Perl_grave, Perl_circ, Perl_slash, Perl_tilde,
@@ -473,6 +476,21 @@ class DocSymbol : public DocNode
     SymType  m_symbol;
 };
 
+/** Node representing a n emoji */
+class DocEmoji : public DocNode
+{
+  public:
+    DocEmoji(DocNode *parent,const QCString &symName);
+    QCString name() const      { return m_symName; }
+    int index() const          { return m_index; }
+    Kind kind() const          { return Kind_Emoji; }
+    void accept(DocVisitor *v) { v->visit(this); }
+
+  private:
+    QCString m_symName;
+    int m_index;
+};
+
 /** Node representing some amount of white space */
 class DocWhiteSpace : public DocNode
 {
@@ -480,7 +498,7 @@ class DocWhiteSpace : public DocNode
     DocWhiteSpace(DocNode *parent,const QCString &chars) : 
       m_chars(chars) { m_parent = parent; }
     Kind kind() const          { return Kind_WhiteSpace; }
-    QCString chars() const      { return m_chars; }
+    QCString chars() const     { return m_chars; }
     void accept(DocVisitor *v) { v->visit(this); }
   private:
     QCString  m_chars;
@@ -537,10 +555,10 @@ class DocInclude : public DocNode
     DocInclude(DocNode *parent,const QCString &file,
                const QCString context, Type t,
                bool isExample,const QCString exampleFile,
-               const QCString blockId) : 
+               const QCString blockId, bool isBlock) : 
       m_file(file), m_context(context), m_type(t),
       m_isExample(isExample), m_exampleFile(exampleFile),
-      m_blockId(blockId) { m_parent = parent; }
+      m_blockId(blockId), m_isBlock(isBlock) { m_parent = parent; }
     Kind kind() const            { return Kind_Include; }
     QCString file() const        { return m_file; }
     QCString extension() const   { int i=m_file.findRev('.'); 
@@ -555,6 +573,7 @@ class DocInclude : public DocNode
     QCString blockId() const     { return m_blockId; }
     bool isExample() const       { return m_isExample; }
     QCString exampleFile() const { return m_exampleFile; }
+    bool isBlock() const         { return m_isBlock; }
     void accept(DocVisitor *v)   { v->visit(this); }
     void parse();
 
@@ -564,6 +583,7 @@ class DocInclude : public DocNode
     QCString  m_text;
     Type      m_type;
     bool      m_isExample;
+    bool      m_isBlock;
     QCString  m_exampleFile;
     QCString  m_blockId;
 };
@@ -705,6 +725,7 @@ class DocTitle : public CompAccept<DocTitle>
     void parse();
     void parseFromString(const QCString &title);
     Kind kind() const          { return Kind_Title; }
+    bool hasTitle() const      { return !m_children.isEmpty(); }
 
   private:
 };
@@ -737,7 +758,7 @@ class DocImage : public CompAccept<DocImage>
   public:
     enum Type { Html, Latex, Rtf, DocBook };
     DocImage(DocNode *parent,const HtmlAttribList &attribs,
-             const QCString &name,Type t,const QCString &url=QCString());
+             const QCString &name,Type t,const QCString &url=QCString(), bool inlineImage = TRUE);
     Kind kind() const           { return Kind_Image; }
     Type type() const           { return m_type; }
     QCString name() const       { return m_name; }
@@ -746,6 +767,7 @@ class DocImage : public CompAccept<DocImage>
     QCString height() const     { return m_height; }
     QCString relPath() const    { return m_relPath; }
     QCString url() const        { return m_url; }
+    bool isInlineImage() const  { return m_inlineImage; }
     const HtmlAttribList &attribs() const { return m_attribs; }
     void parse();
 
@@ -757,6 +779,7 @@ class DocImage : public CompAccept<DocImage>
     QCString  m_height;
     QCString  m_relPath;
     QCString  m_url;
+    bool      m_inlineImage;
 };
 
 /** Node representing a dot file */
@@ -1090,6 +1113,7 @@ class DocSimpleSect : public CompAccept<DocSimpleSect>
     int parseRcs();
     int parseXml();
     void appendLinkWord(const QCString &word);
+    bool hasTitle() const      { return m_title->hasTitle(); }
 
   private:
     Type            m_type;
@@ -1151,7 +1175,7 @@ class DocPara : public CompAccept<DocPara>
     bool isFirst() const        { return m_isFirst; }
     bool isLast() const         { return m_isLast; }
 
-    int handleCommand(const QCString &cmdName);
+    int handleCommand(const QCString &cmdName,const int tok);
     int handleHtmlStartTag(const QCString &tagName,const HtmlAttribList &tagHtmlAttribs);
     int handleHtmlEndTag(const QCString &tagName);
     int handleSimpleSection(DocSimpleSect::Type t,bool xmlContext=FALSE);
@@ -1165,6 +1189,7 @@ class DocPara : public CompAccept<DocPara>
     void handleInclude(const QCString &cmdName,DocInclude::Type t);
     void handleLink(const QCString &cmdName,bool isJavaLink);
     void handleCite();
+    void handleEmoji();
     void handleRef(const QCString &cmdName);
     void handleSection(const QCString &cmdName);
     void handleInheritDoc();
@@ -1368,7 +1393,7 @@ class DocHtmlTable : public CompAccept<DocHtmlTable>
 {
   public:
     DocHtmlTable(DocNode *parent,const HtmlAttribList &attribs) 
-      : m_attribs(attribs) { m_caption=0; m_parent = parent; }
+      : m_attribs(attribs) { m_caption=0; m_numCols=0; m_parent = parent; }
     ~DocHtmlTable()         { delete m_caption; }
     Kind kind() const       { return Kind_HtmlTable; }
     uint numRows() const    { return m_children.count(); }

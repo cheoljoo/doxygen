@@ -19,7 +19,7 @@
 \RequirePackage{adjustbox}
 \RequirePackage{amssymb}
 \RequirePackage{stackengine}
-
+\RequirePackage[normalem]{ulem} % for strikeout, but don't modify emphasis
 
 %---------- Internal commands used in this style file ----------------
 
@@ -188,6 +188,12 @@
   \begin{center}%
 }{%
   \end{center}%
+}
+
+% Used by @image
+% (only if inline is specified)
+\newenvironment{DoxyInlineImage}{%
+}{%
 }
 
 % Used by @attention
