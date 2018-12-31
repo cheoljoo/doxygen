@@ -431,7 +431,7 @@ static void checkArgumentName(const QCString &name,bool isParam)
     }
     if (!found && isParam)
     {
-      //printf("member type=%d\n",memberDef->memberType());
+      //printf("member type=%d\n",g_memberDef->memberType());
       QCString scope=g_memberDef->getScopeString();
       if (!scope.isEmpty()) scope+="::"; else scope="";
       QCString inheritedFrom = "";
@@ -1439,6 +1439,9 @@ reparsetoken:
         case CMD_MINUS:
           children.append(new DocSymbol(parent,DocSymbol::Sym_Minus));
           break;
+        case CMD_EQUAL:
+          children.append(new DocSymbol(parent,DocSymbol::Sym_Equal));
+          break;
         case CMD_EMPHASIS:
           {
             children.append(new DocStyleChange(parent,g_nodeStack.count(),DocStyleChange::Italic,TRUE));
@@ -1791,8 +1794,8 @@ DocEmoji::DocEmoji(DocNode *parent,const QCString &symName) :
   int len=locSymName.length();
   if (len>0)
   {
-    if (locSymName.at(0)!=':')     locSymName.prepend(":");
     if (locSymName.at(len-1)!=':') locSymName.append(":");
+    if (locSymName.at(0)!=':')     locSymName.prepend(":");
   }
   m_symName = locSymName;
   m_index = EmojiEntityMapper::instance()->symbol2index(m_symName);
@@ -3278,6 +3281,7 @@ int DocIndexEntry::parse()
           case CMD_PUNT:    m_entry+='.';   break;
           case CMD_PLUS:    m_entry+='+';   break;
           case CMD_MINUS:   m_entry+='-';   break;
+          case CMD_EQUAL:   m_entry+='=';   break;
           default:
                warn_doc_error(g_fileName,doctokenizerYYlineno,"Unexpected command %s found as argument of \\addindex",
                               qPrint(g_token->name));
@@ -5517,6 +5521,9 @@ int DocPara::handleCommand(const QCString &cmdName, const int tok)
     case CMD_MINUS:
       m_children.append(new DocSymbol(this,DocSymbol::Sym_Minus));
       break;
+    case CMD_EQUAL:
+      m_children.append(new DocSymbol(this,DocSymbol::Sym_Equal));
+      break;
     case CMD_SA:
       g_inSeeBlock=TRUE;
       retval = handleSimpleSection(DocSimpleSect::See);
@@ -7074,6 +7081,9 @@ void DocText::parse()
             break;
           case CMD_MINUS:
             m_children.append(new DocSymbol(this,DocSymbol::Sym_Minus));
+            break;
+          case CMD_EQUAL:
+            m_children.append(new DocSymbol(this,DocSymbol::Sym_Equal));
             break;
           default:
             warn_doc_error(g_fileName,doctokenizerYYlineno,"Unexpected command `%s' found",

@@ -10,6 +10,7 @@
 #include "groupdef.h"
 #include "example.h"
 #include "arguments.h"
+#include "doxygen.h"
 
 #define HEADER ('D'<<24)+('O'<<16)+('X'<<8)+'!'
 
@@ -142,6 +143,7 @@ void marshalSectionInfoList(StorageIntf *s, QList<SectionInfo> *anchors)
       marshalInt(s,si->lineNr);
       marshalInt(s,si->level);
     }
+    anchors->clear();
   }
 }
 
@@ -550,11 +552,10 @@ QList<SectionInfo> *unmarshalSectionInfoList(StorageIntf *s)
   uint i;
   uint count = unmarshalUInt(s);
   if (count==NULL_LIST) return 0; // null list
-  QList<SectionInfo> *result = new QList<SectionInfo>;
-  result->setAutoDelete(TRUE);
+  QList<SectionInfo> *anchors = new QList<SectionInfo>;
   assert(count<1000000);
   for (i=0;i<count;i++)
-  { 
+  {
     QCString label = unmarshalQCString(s);
     QCString title = unmarshalQCString(s);
     QCString ref   = unmarshalQCString(s);
@@ -562,9 +563,20 @@ QList<SectionInfo> *unmarshalSectionInfoList(StorageIntf *s)
     QCString fileName = unmarshalQCString(s);
     int lineNr = unmarshalInt(s);
     int level = unmarshalInt(s);
-    result->append(new SectionInfo(fileName,lineNr,label,title,type,level,ref));
+    SectionInfo *si = Doxygen::sectionDict->find(label);
+    if (si==0) // This should actually never be true since all anchors should be in sectionDict.
+               // Could still optimize the marshaling routine by only storing label.
+    {
+      SectionInfo *si = new SectionInfo(fileName,lineNr,label,title,type,level,ref);
+      anchors->append(si);
+      Doxygen::sectionDict->append(label,si); // this dict owns the anchor objects
+    }
+    else
+    {
+      anchors->append(si);
+    }
   }
-  return result;
+  return anchors;
 }
 
 QList<ListItemInfo> *unmarshalItemInfoList(StorageIntf *s)

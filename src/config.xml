@@ -1692,7 +1692,7 @@ to disable this feature.
 ]]>
       </docs>
     </option>
-    <option type='string' id='CLANG_COMPILATION_DATABASE_PATH' setting='USE_LIBCLANG' defval='0'>
+    <option type='string' id='CLANG_DATABASE_PATH' setting='USE_LIBCLANG' defval=''>
       <docs>
 <![CDATA[
  If clang assisted parsing is enabled you can provide the clang parser with the
@@ -2945,6 +2945,15 @@ or
 ]]>
       </docs>
     </option>
+    <option type='bool' id='XML_NS_MEMB_FILE_SCOPE' defval='0' depends='GENERATE_XML'>
+      <docs>
+<![CDATA[
+ If the \c XML_NS_MEMB_FILE_SCOPE tag is set to \c YES, doxygen
+ will include namespace members in file scope as well, matching the HTML
+ output.
+]]>
+      </docs>
+    </option>
   </group>
   <group name='Docbook' docs='Configuration options related to the DOCBOOK output'>
     <option type='bool' id='GENERATE_DOCBOOK' defval='0'>
@@ -3533,22 +3542,6 @@ to be found in the default search path.
 <![CDATA[
  When using plantuml, the specified paths are searched for files specified by the \c !include
  statement in a plantuml block.
-]]>
-      </docs>
-    </option>
-    <option type='bool' id='PLANTUML_CACHE' defval='0'>
-      <docs>
-<![CDATA[
-If the \c PLANTUML_CACHE tag is set to \c YES, doxygen will
-create the intermediate plantuml files (*.cache.pu & others) that are used to improve the performance.
-]]>
-      </docs>
-    </option>
-    <option type='bool' id='PLANTUML_CACHE_DEBUG_PRINT' defval='0' depends='PLANTUML_CACHE'>
-      <docs>
-<![CDATA[
-If the \c PLANTUML_CACHE_DEBUG_PRINT tag is set to \c YES, doxygen will
-print how to reuse this cache and how to improve the performance.
 ]]>
       </docs>
     </option>
