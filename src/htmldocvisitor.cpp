@@ -126,7 +126,6 @@ static bool mustBeOutsideParagraph(DocNode *n)
         case DocNode::Kind_Internal:
           /* <div> */
         case DocNode::Kind_Include:
-        case DocNode::Kind_Image:
         case DocNode::Kind_SecRefList:
           /* <hr> */
         case DocNode::Kind_HorRuler:
@@ -152,6 +151,8 @@ static bool mustBeOutsideParagraph(DocNode *n)
                  ((DocStyleChange*)n)->style()==DocStyleChange::Center;
         case DocNode::Kind_Formula:
           return !((DocFormula*)n)->isInline();
+        case DocNode::Kind_Image:
+          return !((DocImage*)n)->isInlineImage();
         default:
           break;
   }
@@ -210,28 +211,30 @@ static bool isInvisibleNode(DocNode *node)
       ;
 }
 
-static QString htmlAttribsToString(const HtmlAttribList &attribs, bool img_tag = FALSE)
+static QCString htmlAttribsToString(const HtmlAttribList &attribs, QCString *pAltValue = 0)
 {
-  QString result;
+  QCString result;
   HtmlAttribListIterator li(attribs);
   HtmlAttrib *att;
-  bool alt_set = FALSE;
-
   for (li.toFirst();(att=li.current());++li)
   {
     if (!att->value.isEmpty())  // ignore attribute without values as they
                                 // are not XHTML compliant, with the exception
 				// of the alt attribute with the img tag
     {
-      result+=" ";
-      result+=att->name;
-      result+="=\""+convertToXML(att->value)+"\"";
-      if (att->name == "alt") alt_set = TRUE;
+      if (att->name=="alt" && pAltValue) // optionally return the value of alt separately
+                                         // need to convert <img> to <object> for SVG images,
+                                         // which do not support the alt attribute
+      {
+        *pAltValue = att->value;
+      }
+      else
+      {
+        result+=" ";
+        result+=att->name;
+        result+="=\""+convertToXML(att->value)+"\"";
+      }
     }
-  }
-  if (!alt_set && img_tag)
-  {
-      result+=" alt=\"\"";
   }
   return result;
 }
@@ -588,9 +591,14 @@ void HtmlDocVisitor::visit(DocVerbatim *s)
     case DocVerbatim::PlantUML:
       {
         forceEndParagraph(s);
-
         static QCString htmlOutput = Config_getString(HTML_OUTPUT);
-        QCString baseName = writePlantUMLSource(htmlOutput,s->exampleFile(),s->text());
+        QCString imgExt = getDotImageExtension();
+        PlantumlManager::OutputFormat format = PlantumlManager::PUML_BITMAP;	// default : PUML_BITMAP
+        if (imgExt=="svg")
+        {
+          format = PlantumlManager::PUML_SVG;
+        }
+        QCString baseName = PlantumlManager::instance()->writePlantUMLSource(htmlOutput,s->exampleFile(),s->text(),format);
         m_t << "<div class=\"plantumlgraph\">" << endl;
         writePlantUMLFile(baseName,s->relPath(),s->context());
         visitPreCaption(m_t, s);
@@ -1205,6 +1213,10 @@ void HtmlDocVisitor::visitPre(DocPara *p)
 
 void HtmlDocVisitor::visitPost(DocPara *p)
 {
+
+  //printf("DocPara::visitPost: parent of kind %d ",
+  //       p->parent() ? p->parent()->kind() : -1);
+
   bool needsTag = FALSE;
   if (p->parent()) 
   {
@@ -1577,7 +1589,7 @@ void HtmlDocVisitor::visitPre(DocHRef *href)
   else
   {
     QCString url = correctURL(href->url(),href->relPath());
-    m_t << "<a href=\"" << convertToXML(url)  << "\""
+    m_t << "<a href=\"" << convertToHtml(url)  << "\""
         << htmlAttribsToString(href->attribs()) << ">";
   }
 }
@@ -1610,17 +1622,9 @@ void HtmlDocVisitor::visitPre(DocImage *img)
   if (img->type()==DocImage::Html)
   {
     bool inlineImage = img->isInlineImage();
-    bool typeSVG = FALSE;
-
+    bool typeSVG = img->isSVG();
     QCString url = img->url();
-    if (url.isEmpty())
-    {
-      typeSVG = (img->name().right(4)==".svg");
-    }
-    else
-    {
-      typeSVG = (url.right(4)==".svg");
-    }
+
     if (!inlineImage)
     {
       forceEndParagraph(img);
@@ -1642,41 +1646,48 @@ void HtmlDocVisitor::visitPre(DocImage *img)
     {
       sizeAttribs+=" height=\""+img->height()+"\"";
     }
+    // 16 cases: url.isEmpty() | typeSVG | inlineImage | img->hasCaption()
+    QCString alt;
+    QCString attrs = htmlAttribsToString(img->attribs(),&alt);
+    QCString src;
     if (url.isEmpty())
     {
-      if (typeSVG)
+      src = img->relPath()+img->name();
+    }
+    else
+    {
+      src = correctURL(url,img->relPath());
+    }
+    if (typeSVG)
+    {
+      m_t << "<object type=\"image/svg+xml\" style=\"pointer-events: none;\" data=\"" << src
+        << "\"" << sizeAttribs << attrs;
+      if (inlineImage)
       {
-        m_t << "<object type=\"image/svg+xml\" data=\"" << img->relPath() << img->name()
-            << "\"" << sizeAttribs << htmlAttribsToString(img->attribs()) << ">" << baseName
-            << "</object>" << endl;
+        // skip closing tag
       }
       else
       {
-        m_t << "<img src=\"" << img->relPath() << img->name() << "\" alt=\""
-            << baseName << "\"" << sizeAttribs << htmlAttribsToString(img->attribs())
-	    << (inlineImage ? " class=\"inline\"" : "/>\n");
+        m_t << ">" << alt << "</object>" << endl;
       }
     }
-    else // link to URL
+    else
     {
-      if (typeSVG)
+      m_t << "<img src=\"" << convertToHtml(src) << "\" alt=\"" << alt << "\"" << sizeAttribs << attrs;
+      if (inlineImage)
       {
-        m_t << "<object type=\"image/svg+xml\" data=\"" << correctURL(url,img->relPath())
-            << "\"" << sizeAttribs << htmlAttribsToString(img->attribs())
-            << "></object>" << endl;
+        m_t << " class=\"inline\"";
       }
       else
       {
-        m_t << "<img src=\"" << correctURL(url,img->relPath()) << "\""
-            << sizeAttribs << htmlAttribsToString(img->attribs(), TRUE)
-	    << (inlineImage ? " class=\"inline\"" : "/>\n");
+        m_t << "/>\n";
       }
     }
     if (img->hasCaption())
     {
       if (inlineImage)
       {
-       m_t << " title=\"";
+        m_t << " title=\"";
       }
       else
       {
@@ -1686,7 +1697,14 @@ void HtmlDocVisitor::visitPre(DocImage *img)
     }
     else if (inlineImage)
     {
-      m_t << "/>" << endl;
+      if (typeSVG)
+      {
+        m_t << ">" << alt << "</object>";
+      }
+      else
+      {
+        m_t << "/>";
+      }
     }
   }
   else // other format -> skip
@@ -1705,11 +1723,24 @@ void HtmlDocVisitor::visitPost(DocImage *img)
     if (img->hasCaption())
     {
       if (inlineImage)
-        m_t << "\"/>\n ";
-      else
+      {
+        if (img->isSVG())
+        {
+          QCString alt;
+          QCString attrs = htmlAttribsToString(img->attribs(),&alt);
+          m_t << "\">" << alt << "</object>";
+        }
+        else
+        {
+          m_t << "\"/>";
+        }
+      }
+      else // end <div class="caption">
+      {
         m_t << "</div>";
+      }
     }
-    if (!inlineImage)
+    if (!inlineImage) // end <div class="image">
     {
       m_t << "</div>" << endl;
       forceStartParagraph(img);
@@ -2279,7 +2310,7 @@ void HtmlDocVisitor::writePlantUMLFile(const QCString &fileName,
   QCString imgExt = getDotImageExtension();
   if (imgExt=="svg")
   {
-    generatePlantUMLOutput(fileName,outDir,PUML_SVG);
+    PlantumlManager::instance()->generatePlantUMLOutput(fileName,outDir,PlantumlManager::PUML_SVG);
     //m_t << "<iframe scrolling=\"no\" frameborder=\"0\" src=\"" << relPath << baseName << ".svg" << "\" />" << endl;
     //m_t << "<p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p>";
     //m_t << "</iframe>" << endl;
@@ -2287,7 +2318,7 @@ void HtmlDocVisitor::writePlantUMLFile(const QCString &fileName,
   }
   else
   {
-    generatePlantUMLOutput(fileName,outDir,PUML_BITMAP);
+    PlantumlManager::instance()->generatePlantUMLOutput(fileName,outDir,PlantumlManager::PUML_BITMAP);
     m_t << "<img src=\"" << relPath << baseName << ".png" << "\" />" << endl;
   }
 }

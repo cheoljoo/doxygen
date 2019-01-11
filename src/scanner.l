@@ -2438,6 +2438,10 @@ OPERATOR  "operator"{B}*({ARITHOP}|{ASSIGNOP}|{LOGICOP}|{BITOP})
 					    {
 					      current->protection = Protected;
 					    }
+					    else if ((insideCS || insideD || insidePHP || insideJS) && qstrcmp(yytext,"internal")==0)
+					    {
+					      current->protection = Package;
+					    }
 					    else if (javaLike && qstrcmp(yytext,"private")==0)
 					    {
 					      current->protection = Private;
@@ -6908,12 +6912,10 @@ static void newEntry()
 static void handleCommentBlock(const QCString &doc,bool brief)
 {
   static bool hideInBodyDocs = Config_getBool(HIDE_IN_BODY_DOCS);
-  int position=0;
-  bool needsEntry=FALSE;
   if (docBlockInBody && hideInBodyDocs) return;
   //printf("parseCommentBlock [%s] brief=%d\n",doc.data(),brief);
   int lineNr = brief ? current->briefLine : current->docLine;   // line of block start
-  
+
   // fill in inbodyFile && inbodyLine the first time, see bug 633891
   Entry *docEntry = docBlockInBody && previous ? previous : current;
   if (docBlockInBody && docEntry && docEntry->inbodyLine==-1)
@@ -6922,12 +6924,15 @@ static void handleCommentBlock(const QCString &doc,bool brief)
     docEntry->inbodyLine = lineNr;
   }
 
+  int position=0;
+  bool needsEntry=FALSE;
+  QCString processedDoc = preprocessCommentBlock(stripIndentation(doc),yyFileName,lineNr);
   while (parseCommentBlock(
 	g_thisParser,
 	docBlockInBody && previous ? previous : current,
-	stripIndentation(doc),        // text
-	yyFileName, // file
-	lineNr,     // line of block start
+	processedDoc, // text
+	yyFileName,   // file
+	lineNr,       // line of block start
 	docBlockInBody ? FALSE : brief,               // isBrief
 	docBlockInBody ? FALSE : docBlockAutoBrief,   // isJavaDocStyle
 	docBlockInBody,                               // isInBody
@@ -6935,7 +6940,7 @@ static void handleCommentBlock(const QCString &doc,bool brief)
         position,
         needsEntry
         )
-     ) 
+     )
   {
     //printf("parseCommentBlock position=%d [%s]\n",position,doc.data()+position);
     if (needsEntry) 

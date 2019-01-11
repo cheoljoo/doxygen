@@ -422,7 +422,7 @@ static void checkArgumentName(const QCString &name,bool isParam)
       argName=argName.stripWhiteSpace();
       //printf("argName=`%s' aName=%s\n",argName.data(),aName.data());
       if (argName.right(3)=="...") argName=argName.left(argName.length()-3);
-      if (aName==argName) 
+      if (aName==argName && isParam)
       {
 	g_paramsFound.insert(aName,(void *)(0x8));
 	found=TRUE;
@@ -509,7 +509,7 @@ static void checkUnOrMultipleDocumentedParams()
                          "argument '" + aName +
                          "' from the argument list of " +
                          QCString(g_memberDef->qualifiedName()) +
-                         " has muliple @param documentation sections");
+                         " has multiple @param documentation sections");
         }
       }
       if (found)
@@ -2979,6 +2979,11 @@ DocImage::DocImage(DocNode *parent,const HtmlAttribList &attribs,const QCString 
       m_url(url), m_inlineImage(inlineImage)
 {
   m_parent = parent;
+}
+
+bool DocImage::isSVG() const
+{
+  return m_url.isEmpty() ? m_name.right(4)==".svg" : m_url.right(4)==".svg";
 }
 
 void DocImage::parse()
@@ -7586,7 +7591,7 @@ DocRoot *validatingParseDoc(const char *fileName,int startLine,
       case Definition::TypePage:
         {
           PageDef *pd = (PageDef *)ctx;
-          if (!pd->title().isEmpty())
+          if (pd->hasTitle())
           {
             name = theTranslator->trPage(TRUE,TRUE)+" "+pd->title();
           }

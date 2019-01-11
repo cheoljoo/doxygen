@@ -331,13 +331,14 @@ class TestManager:
 			tester = Tester(self.args,test)
 			tester.run(self)
 		res=self.result()
-		if self.args.xhtml and not res and not self.args.keep:
+		if self.args.xhtml and self.args.inputdir!='.' and not res and not self.args.keep:
 			shutil.rmtree("dtd",ignore_errors=True)
 		return 0 if self.args.updateref else res
 
 	def prepare_dtd(self):
-		shutil.rmtree("dtd",ignore_errors=True)
-		shutil.copytree(self.args.inputdir+"/dtd", "dtd")
+		if self.args.inputdir!='.':
+			shutil.rmtree("dtd",ignore_errors=True)
+			shutil.copytree(self.args.inputdir+"/dtd", "dtd")
 
 def main():
 	# argument handling
@@ -411,7 +412,7 @@ def main():
 			tests.append(glob.glob('0%s_*'%id))
 			tests.append(glob.glob('00%s_*'%id))
 	if (not args.ids and not args.start_id):  # find all tests
-		tests = glob.glob('[0-9][0-9][0-9]_*')
+		tests = sorted(glob.glob('[0-9][0-9][0-9]_*'))
 	else:
 		tests = list(itertools.chain.from_iterable(tests))
 	os.chdir(starting_directory)

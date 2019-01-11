@@ -60,7 +60,7 @@ static void visitPreStart(FTextStream &t, const char *cmd, bool doCaption,
   }
   if (!name.isEmpty())
   {
-    t << " name=\"" << name << "\"";
+    t << " name=\"" << convertToXML(name, TRUE) << "\"";
   }
   if (!width.isEmpty())
   {
@@ -70,7 +70,10 @@ static void visitPreStart(FTextStream &t, const char *cmd, bool doCaption,
   {
     t << " height=\"" << convertToXML(height) << "\"";
   }
-  if (inlineImage) t << " inline=\"yes\">";
+  if (inlineImage)
+  {
+    t << " inline=\"yes\"";
+  }
   if (doCaption)
   {
     t << " caption=\"";
@@ -767,9 +770,7 @@ void XmlDocVisitor::visitPost(DocInternal *)
 void XmlDocVisitor::visitPre(DocHRef *href)
 {
   if (m_hide) return;
-  m_t << "<ulink url=\"";
-  filter(href->url());
-  m_t << "\">";
+  m_t << "<ulink url=\"" << convertToXML(href->url(), TRUE) << "\">";
 }
 
 void XmlDocVisitor::visitPost(DocHRef *) 
