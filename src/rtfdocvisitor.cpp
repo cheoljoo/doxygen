@@ -429,20 +429,21 @@ void RTFDocVisitor::visit(DocInclude *inc)
          m_t << "\\par" << endl;
          m_t << rtf_Style_Reset << getStyle("CodeExample");
          QFileInfo cfi( inc->file() );
-         FileDef fd( cfi.dirPath().utf8(), cfi.fileName().utf8() );
+         FileDef *fd = createFileDef( cfi.dirPath().utf8(), cfi.fileName().utf8() );
          Doxygen::parserManager->getParser(inc->extension())
                                ->parseCode(m_ci,inc->context(),
                                            inc->text(),
                                            langExt,
                                            inc->isExample(),
                                            inc->exampleFile(),
-                                           &fd,   // fileDef,
+                                           fd,   // fileDef,
                                            -1,    // start line
                                            -1,    // end line
                                            FALSE, // inline fragment
                                            0,     // memberDef
                                            TRUE   // show line numbers
 					   );
+         delete fd;
          m_t << "\\par";
          m_t << "}" << endl;
       }
@@ -465,10 +466,9 @@ void RTFDocVisitor::visit(DocInclude *inc)
       m_t << "\\par";
       m_t << "}" << endl;
       break;
-    case DocInclude::DontInclude: 
-      break;
-    case DocInclude::HtmlInclude: 
-      break;
+    case DocInclude::DontInclude:
+    case DocInclude::DontIncWithLines:
+    case DocInclude::HtmlInclude:
     case DocInclude::LatexInclude:
       break;
     case DocInclude::VerbInclude: 
@@ -496,7 +496,7 @@ void RTFDocVisitor::visit(DocInclude *inc)
     case DocInclude::SnipWithLines:
       {
          QFileInfo cfi( inc->file() );
-         FileDef fd( cfi.dirPath().utf8(), cfi.fileName().utf8() );
+         FileDef *fd = createFileDef( cfi.dirPath().utf8(), cfi.fileName().utf8() );
          m_t << "{" << endl;
          if (!m_lastIsPara) m_t << "\\par" << endl;
          m_t << rtf_Style_Reset << getStyle("CodeExample");
@@ -507,13 +507,14 @@ void RTFDocVisitor::visit(DocInclude *inc)
                                            langExt,
                                            inc->isExample(),
                                            inc->exampleFile(), 
-                                           &fd,
+                                           fd,
                                            lineBlock(inc->text(),inc->blockId()),
                                            -1,    // endLine
                                            FALSE, // inlineFragment
                                            0,     // memberDef
                                            TRUE   // show line number
                                           );
+         delete fd;
          m_t << "}";
       }
       break;
@@ -548,9 +549,24 @@ void RTFDocVisitor::visit(DocIncOperator *op)
     popEnabled();
     if (!m_hide) 
     {
+      FileDef *fd;
+      if (!op->includeFileName().isEmpty())
+      {
+        QFileInfo cfi( op->includeFileName() );
+        fd = createFileDef( cfi.dirPath().utf8(), cfi.fileName().utf8() );
+      }
+
       Doxygen::parserManager->getParser(m_langExt)
                             ->parseCode(m_ci,op->context(),op->text(),langExt,
-                                        op->isExample(),op->exampleFile());
+                                        op->isExample(),op->exampleFile(),
+                                        fd,     // fileDef
+                                        op->line(),    // startLine
+                                        -1,    // endLine
+                                        FALSE, // inline fragment
+                                        0,     // memberDef
+                                        op->showLineNo()  // show line numbers
+                                       );
+      if (fd) delete fd;
     }
     pushEnabled();
     m_hide=TRUE;
@@ -771,16 +787,18 @@ void RTFDocVisitor::visitPre(DocSimpleSect *s)
     m_t << "}"; // end bold
     incIndentLevel();
     m_t << rtf_Style_Reset << getStyle("DescContinue");
+    m_t << "{\\s17 \\sa60 \\sb30\n";
   }
   m_lastIsPara=FALSE;
 }
 
-void RTFDocVisitor::visitPost(DocSimpleSect *)
+void RTFDocVisitor::visitPost(DocSimpleSect *s)
 {
   if (m_hide) return;
   DBG_RTF("{\\comment RTFDocVisitor::visitPost(DocSimpleSect)}\n");
   if (!m_lastIsPara) m_t << "\\par" << endl;
   decIndentLevel();
+  if (s->type()!=DocSimpleSect::User && s->type()!=DocSimpleSect::Rcs) m_t << "}";
   m_t << "}"; // end desc
   m_lastIsPara=TRUE;
 }

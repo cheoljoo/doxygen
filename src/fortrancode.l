@@ -140,7 +140,7 @@ static int	     g_yyLineNr;        //!< current line number
 static int	     g_contLineNr;      //!< current, local, line number for continuation determination
 static int	    *g_hasContLine = NULL;     //!< signals whether or not a line has a continuation line (fixed source form)
 static bool          g_needsTermination;
-static Definition   *g_searchCtx;
+static const Definition *g_searchCtx;
 static bool          g_collectXRefs;
 static bool          g_isFixedForm;
 
@@ -452,16 +452,16 @@ static bool getFortranDefs(const QCString &memberName, const QCString &moduleNam
       MemberNameIterator mli(*mn);
       for (mli.toFirst();(md=mli.current());++mli) // all found functions with given name
       {
-        FileDef  *fd=md->getFileDef();
-        GroupDef *gd=md->getGroupDef();
-        ClassDef *cd=md->getClassDef();
+        const FileDef  *fd=md->getFileDef();
+        const GroupDef *gd=md->getGroupDef();
+        const ClassDef *cd=md->getClassDef();
 
  //cout << "found link with same name: " << fd->fileName() << "  " <<  memberName;
  //if (md->getNamespaceDef() != 0) cout << " in namespace " << md->getNamespaceDef()->name();cout << endl;
 
         if ((gd && gd->isLinkable()) || (fd && fd->isLinkable()))
         {
-           NamespaceDef *nspace= md->getNamespaceDef();
+           const NamespaceDef *nspace= md->getNamespaceDef();
 
            if (nspace == 0) 
 	   { // found function in global scope
@@ -532,8 +532,8 @@ static bool getLink(UseSDict *usedict, // dictonary with used modules
     if (md->isVariable() && (md->getLanguage()!=SrcLangExt_Fortran)) return FALSE; // Non Fortran variables aren't handled yet,
                                                                                    // see also linkifyText in util.cpp
 
-    Definition *d = md->getOuterScope()==Doxygen::globalScope ?
-	            md->getBodyDef() : md->getOuterScope();
+    const Definition *d = md->getOuterScope()==Doxygen::globalScope ?
+	                  md->getBodyDef() : md->getOuterScope();
     if (md->getGroupDef()) d = md->getGroupDef();
     if (d && d->isLinkable())
     {
@@ -934,7 +934,7 @@ LANGUAGE_BIND_SPEC BIND{BS}"("{BS}C{BS}(,{BS}NAME{BS}"="{BS}"\""(.*)"\""{BS})?")
                                           yy_pop_state();
                                           YY_FTN_RESET
                                         }
-<Start>^{BS}"end"{BS}("block"{BS}"data"|{SUBPROG}|"module"|"program"|"enum"|"type"|"interface")?{BS}     {  // Fortran subroutine or function ends
+<Start>"end"{BS}("block"{BS}"data"|{SUBPROG}|"module"|"program"|"enum"|"type"|"interface")?{BS}     {  // Fortran subroutine or function ends
                                           //cout << "===> end function " << yytext << endl;
                                           endScope();
    					  startFontClass("keyword");
@@ -943,11 +943,11 @@ LANGUAGE_BIND_SPEC BIND{BS}"("{BS}C{BS}(,{BS}NAME{BS}"="{BS}"\""(.*)"\""{BS})?")
                                           yy_push_state(YY_START);
                                           BEGIN(Subprogend);
                                         }
-<Subprogend>{ID}/{BS}(\n|!)             {
+<Subprogend>{ID}/{BS}(\n|!|;)             {
 					  generateLink(*g_code,yytext);
                                           yy_pop_state();
                                         }
-<Start>^{BS}"end"{BS}("block"{BS}"data"|{SUBPROG}|"module"|"program"|"enum"|"type"|"interface"){BS}/(\n|!) {  // Fortran subroutine or function ends
+<Start>"end"{BS}("block"{BS}"data"|{SUBPROG}|"module"|"program"|"enum"|"type"|"interface"){BS}/(\n|!|;) {  // Fortran subroutine or function ends
                                           //cout << "===> end function " << yytext << endl;
                                           endScope();
    					  startFontClass("keyword");
@@ -1313,21 +1313,16 @@ static void checkContLines(const char *s)
   g_hasContLine[0] = 0;
 }
 
-void parseFortranCode(CodeOutputInterface &od,const char *className,const QCString &s, 
+void parseFortranCode(CodeOutputInterface &od,const char *,const QCString &s, 
                   bool exBlock, const char *exName,FileDef *fd,
 		  int startLine,int endLine,bool inlineFragment,
-		  MemberDef *memberDef,bool,Definition *searchCtx,
+		  const MemberDef *,bool,const Definition *searchCtx,
                   bool collectXRefs, FortranFormat format)
 {
   //printf("***parseCode() exBlock=%d exName=%s fd=%p\n",exBlock,exName,fd);
 
-  // used parameters
-  (void)memberDef;
-  (void)className;
-
   if (s.isEmpty()) return;
   printlex(yy_flex_debug, TRUE, __FILE__, fd ? fd->fileName().data(): NULL);
-  TooltipManager::instance()->clearTooltips();
   g_code = &od;
   g_inputString   = s;
   g_inputPosition = 0;
@@ -1358,7 +1353,7 @@ void parseFortranCode(CodeOutputInterface &od,const char *className,const QCStri
   if (exBlock && fd==0)
   {
     // create a dummy filedef for the example
-    g_sourceFileDef = new FileDef("",exName);
+    g_sourceFileDef = createFileDef("",exName);
   }
   if (g_sourceFileDef) 
   {
@@ -1381,10 +1376,6 @@ void parseFortranCode(CodeOutputInterface &od,const char *className,const QCStri
   {
     endFontClass();
     g_code->endCodeLine();
-  }
-  if (fd)
-  {
-    TooltipManager::instance()->writeTooltips(*g_code);
   }
   if (exBlock && g_sourceFileDef)
   {

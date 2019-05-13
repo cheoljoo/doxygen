@@ -1394,6 +1394,18 @@ OPERATOR  "operator"{B}*({ARITHOP}|{ASSIGNOP}|{LOGICOP}|{BITOP})
 					  current->virt = Virtual;
 					  lineCount();
 					}
+<FindMembers>{B}*"constexpr"{BN}+    	{ 
+                                          if (insideCpp)
+                                          {
+                                            current->type += " constexpr ";
+                                            current->spec |= Entry::ConstExpr;
+                                            lineCount();
+                                          }
+                                          else
+                                          {
+                                            REJECT;
+                                          }
+					}
 <FindMembers>{B}*"published"{BN}+	{ // UNO IDL published keyword
 					  if (insideIDL)
 					  {
@@ -4613,7 +4625,7 @@ OPERATOR  "operator"{B}*({ARITHOP}|{ASSIGNOP}|{LOGICOP}|{BITOP})
 					    unput(lastCopyArgChar);
 					  BEGIN( lastCommentInArgContext );
   					}
-<CopyArgCommentLine>{CMD}("verbatim"|"latexonly"|"htmlonly"|"xmlonly"|"manonly"|"dot"|"code")/[^a-z_A-Z0-9]	{ // verbatim command (which could contain nested comments!)
+<CopyArgCommentLine>{CMD}("verbatim"|"latexonly"|"htmlonly"|"xmlonly"|"manonly"|"dot"|"code")/[^a-z_A-Z0-9\-]	{ // verbatim command (which could contain nested comments!)
 				          docBlockName=&yytext[1];
   					  fullArgString+=yytext;
 					  BEGIN(CopyArgVerbatim);
@@ -4631,7 +4643,7 @@ OPERATOR  "operator"{B}*({ARITHOP}|{ASSIGNOP}|{LOGICOP}|{BITOP})
   					  fullArgString+=yytext;
   					  BEGIN(CopyArgVerbatim);
                                         }
-<CopyArgVerbatim>[\\@]("endverbatim"|"endlatexonly"|"endhtmlonly"|"endxmlonly"|"enddocbookonly"|"endmanonly"|"enddot"|"endcode"|"f$"|"f]"|"f}")/[^a-z_A-Z0-9] { // end of verbatim block
+<CopyArgVerbatim>[\\@]("endverbatim"|"endlatexonly"|"endhtmlonly"|"endxmlonly"|"enddocbookonly"|"endmanonly"|"enddot"|"endcode"|"f$"|"f]"|"f}")/[^a-z_A-Z0-9\-] { // end of verbatim block
   					  fullArgString+=yytext;
 				          if (yytext[1]=='f') // end of formula
 				          {
@@ -6530,7 +6542,7 @@ OPERATOR  "operator"{B}*({ARITHOP}|{ASSIGNOP}|{LOGICOP}|{BITOP})
                                           // middle of a comment block
   					  docBlock+=yytext;
   					}
-<DocBlock>("@@"|"\\\\"){ID}/[^a-z_A-Z0-9] { // escaped command
+<DocBlock>({CMD}{CMD}){ID}/[^a-z_A-Z0-9] { // escaped command
   					  docBlock+=yytext;
   					}
 <DocBlock>{CMD}("f$"|"f["|"f{")	        {
@@ -6551,7 +6563,7 @@ OPERATOR  "operator"{B}*({ARITHOP}|{ASSIGNOP}|{LOGICOP}|{BITOP})
                                           g_nestedComment=FALSE;
   					  BEGIN(DocCopyBlock);
   					}
-<DocBlock>{CMD}("verbatim"|"latexonly"|"htmlonly"|"xmlonly"|"manonly"|"dot"|"code")/[^a-z_A-Z0-9]	{ // verbatim command (which could contain nested comments!)
+<DocBlock>{CMD}("verbatim"|"latexonly"|"htmlonly"|"xmlonly"|"manonly"|"dot"|"code")/[^a-z_A-Z0-9\-]	{ // verbatim command (which could contain nested comments!)
                                           docBlock+=yytext;
 				          docBlockName=&yytext[1];
                                           g_fencedSize=0;
@@ -6639,7 +6651,7 @@ OPERATOR  "operator"{B}*({ARITHOP}|{ASSIGNOP}|{LOGICOP}|{BITOP})
                                             docBlock+=indent;
                                           }
   					}
-<DocCopyBlock>^{B}*"*"+/{BN}+"*"{BN}*	{ // start of a comment line with two *'s
+<DocCopyBlock>^{B}*"*"+/{B}+"*"{BN}*	{ // start of a comment line with two *'s
   					  if (docBlockName=="code")
                                           {
                                             QCString indent;
@@ -6720,7 +6732,7 @@ OPERATOR  "operator"{B}*({ARITHOP}|{ASSIGNOP}|{LOGICOP}|{BITOP})
   					}
 <DocCopyBlock><<EOF>>			{
   					  warn(yyFileName,yyLineNr,
-					      "reached end of file while inside a %s block!\n"
+					      "reached end of file while inside a `%s' block!\n"
 					      "The command that should end the block seems to be missing!\n",
 					      docBlockName.data());
   					  yyterminate();
@@ -6817,6 +6829,8 @@ OPERATOR  "operator"{B}*({ARITHOP}|{ASSIGNOP}|{LOGICOP}|{BITOP})
 <SkipComment>[^\*\n]+
 
 <*>"[["                                 { // C++11 attribute
+                                          if (!insideCpp) REJECT;
+                                          if (YY_START == CopyGString || YY_START == CopyGString) REJECT;
                                           lastC11AttributeContext = YY_START;
                                           BEGIN( SkipC11Attribute );
                                         }
@@ -6973,6 +6987,7 @@ static void handleParametersCommentBlocks(ArgumentList *al)
     //printf("    Param %s docs=%s\n",a->name.data(),a->docs.data());
     if (!a->docs.isEmpty())
     {
+      if  (!a->name && a->type == "...") a->name= "...";
       int position=0;
       bool needsEntry;
 
@@ -7353,9 +7368,9 @@ void CLanguageScanner::parseCode(CodeOutputInterface & codeOutIntf,
                    int startLine,
                    int endLine,
                    bool inlineFragment,
-		   MemberDef *memberDef,
+		   const MemberDef *memberDef,
 		   bool showLineNumbers,
-                   Definition *searchCtx,
+                   const Definition *searchCtx,
                    bool collectXRefs
                   )
 {

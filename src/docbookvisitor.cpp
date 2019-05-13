@@ -386,13 +386,14 @@ DB_VIS_C
       {
         m_t << "<literallayout><computeroutput>";
         QFileInfo cfi( inc->file() );
-        FileDef fd( cfi.dirPath().utf8(), cfi.fileName().utf8() );
+        FileDef *fd = createFileDef( cfi.dirPath().utf8(), cfi.fileName().utf8() );
         Doxygen::parserManager->getParser(inc->extension())
           ->parseCode(m_ci,inc->context(),
               inc->text(),
               langExt,
               inc->isExample(),
-              inc->exampleFile(), &fd);
+              inc->exampleFile(), fd);
+        delete fd;
         m_t << "</computeroutput></literallayout>";
       }
       break;
@@ -407,9 +408,8 @@ DB_VIS_C
       m_t << "</computeroutput></literallayout>";
       break;
     case DocInclude::DontInclude:
-      break;
+    case DocInclude::DontIncWithLines:
     case DocInclude::HtmlInclude:
-      break;
     case DocInclude::LatexInclude:
       break;
     case DocInclude::VerbInclude:
@@ -432,7 +432,7 @@ DB_VIS_C
     case DocInclude::SnipWithLines:
       {
          QFileInfo cfi( inc->file() );
-         FileDef fd( cfi.dirPath().utf8(), cfi.fileName().utf8() );
+         FileDef *fd = createFileDef( cfi.dirPath().utf8(), cfi.fileName().utf8() );
          m_t << "<literallayout><computeroutput>";
          Doxygen::parserManager->getParser(inc->extension())
                                ->parseCode(m_ci,
@@ -441,13 +441,14 @@ DB_VIS_C
                                            langExt,
                                            inc->isExample(),
                                            inc->exampleFile(), 
-                                           &fd,
+                                           fd,
                                            lineBlock(inc->text(),inc->blockId()),
                                            -1,    // endLine
                                            FALSE, // inlineFragment
                                            0,     // memberDef
                                            TRUE   // show line number
                                           );
+         delete fd;
          m_t << "</computeroutput></literallayout>";
       }
       break;
@@ -477,10 +478,25 @@ DB_VIS_C
     popEnabled();
     if (!m_hide)
     {
+      FileDef *fd;
+      if (!op->includeFileName().isEmpty())
+      {
+        QFileInfo cfi( op->includeFileName() );
+        fd = createFileDef( cfi.dirPath().utf8(), cfi.fileName().utf8() );
+      }
+
       Doxygen::parserManager->getParser(m_langExt)
         ->parseCode(m_ci,op->context(),
             op->text(),langExt,op->isExample(),
-            op->exampleFile());
+            op->exampleFile(),
+            fd,     // fileDef
+            op->line(),    // startLine
+            -1,    // endLine
+            FALSE, // inline fragment
+            0,     // memberDef
+            op->showLineNo()  // show line numbers
+         );
+      if (fd) delete fd;
     }
     pushEnabled();
     m_hide=TRUE;
@@ -767,14 +783,12 @@ DB_VIS_C
       }
       break;
     case DocSimpleSect::User:
+    case DocSimpleSect::Rcs:
+    case DocSimpleSect::Unknown:
       if (s->hasTitle())
         m_t << "<formalpara>" << endl;
       else
         m_t << "<para>" << endl;
-      break;
-    case DocSimpleSect::Rcs:
-    case DocSimpleSect::Unknown:
-      m_t << "<para>" << endl;
       break;
   }
 }
@@ -785,11 +799,9 @@ DB_VIS_C
   if (m_hide) return;
   switch(s->type())
   {
+    case DocSimpleSect::User:
     case DocSimpleSect::Rcs:
     case DocSimpleSect::Unknown:
-      m_t << "</para>" << endl;
-      break;
-    case DocSimpleSect::User:
       if (s->hasTitle())
         m_t << "</formalpara>" << endl;
       else
@@ -955,7 +967,7 @@ DB_VIS_C
   if (m_hide) return;
   m_t << "<informaltable frame=\"all\">" << endl;
   m_t << "    <tgroup cols=\"" << t->numColumns() << "\" align=\"left\" colsep=\"1\" rowsep=\"1\">" << endl;
-  for (int i = 0; i <t->numColumns(); i++)
+  for (uint i = 0; i <t->numColumns(); i++)
   {
     // do something with colwidth based of cell width specification (be aware of possible colspan in the header)?
     m_t << "      <colspec colname='c" << i+1 << "'/>\n";

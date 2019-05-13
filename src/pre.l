@@ -882,6 +882,21 @@ static bool replaceFunctionMacro(const QCString &expr,QCString *rest,int pos,int
 	  arg+=c;
 	}
       }	    
+      else if (c=='/') // possible start of a comment
+      {
+        char prevChar = '\0';
+        arg+=c;
+        if ((cc=getCurrentChar(expr,rest,j)) == '*') // we have a comment
+        {
+          while ((cc=getNextChar(expr,rest,j))!=EOF && cc!=0)
+          {
+            c=(char)cc;
+            arg+=c;
+            if (c == '/' && prevChar == '*') break; // we have an end of comment
+            prevChar = c;
+          }
+        }
+      }
       else // append other characters
       {
 	arg+=c;
@@ -1110,7 +1125,6 @@ static void expandExpression(QCString &expr,QCString *rest,int pos)
 
 	if (replaced) // expand the macro and rescan the expression
 	{
-	    
 	  //printf("replacing `%s'->`%s'\n",expr.mid(p,len).data(),expMacro.data());
 	  QCString resultExpr=expMacro;
 	  QCString restExpr=expr.right(expr.length()-len-p);
@@ -1147,6 +1161,44 @@ static void expandExpression(QCString &expr,QCString *rest,int pos)
   }
 }
 
+/*! @brief Process string or character literal.
+ *
+ * \a inputStr should point to the start of a string or character literal.
+ * the routine will return a pointer to just after the end of the literal
+ * the character making up the literal will be added to \a result.
+ */
+const char *processUntilMatchingTerminator(const char *inputStr,QCString &result)
+{
+  if (inputStr==0) return inputStr;
+  char term = *inputStr; // capture start character of the literal
+  if (term!='\'' && term!='"') return inputStr; // not a valid literal
+  char c=term;
+  // output start character
+  result+=c;
+  inputStr++;
+  while ((c=*inputStr)) // while inside the literal
+  {
+    if (c==term) // found end marker of the literal
+    {
+      // output end character and stop
+      result+=c;
+      inputStr++;
+      break;
+    }
+    else if (c=='\\') // escaped character, process next character
+                      // as well without checking for end marker.
+    {
+      result+=c;
+      inputStr++;
+      c=*inputStr;
+      if (c==0) break; // unexpected end of string after escape character
+    }
+    result+=c;
+    inputStr++;
+  }
+  return inputStr;
+}
+
 /*! replaces all occurrences of @@@@ in \a s by @@
  *  and removes all occurrences of @@E.
  *  All identifiers found are replaced by 0L
@@ -1180,6 +1232,10 @@ QCString removeIdsAndMarkers(const char *s)
 	p++;
         inNum=TRUE;	
       }
+      else if (c=='\'') // quoted character
+      {
+        p = processUntilMatchingTerminator(p,result);
+      }
       else if (c=='d' && !inNum) // identifier starting with a `d'
       {
 	if (qstrncmp(p,"defined ",8)==0 || qstrncmp(p,"defined(",8)==0) 
@@ -1199,6 +1255,7 @@ QCString removeIdsAndMarkers(const char *s)
 	result+="0L";
 	p++;
 	while ((c=*p) && isId(c)) p++;
+	while ((c=*p) && isspace((uchar)c)) p++;
 	if (*p=='(') // undefined function macro
 	{
 	  p++;
@@ -1306,30 +1363,8 @@ QCString removeMarkers(const char *s)
 	  }
 	  break;
 	case '"': // skip string literals
-	  {
-	    result+=c;
-	    char pc=c;
-	    c=*++p;
-	    while (*p && (c!='"' || pc=='\\')) // no end quote
-	    {
-	      result+=c;
-	      c=*++p;
-	    }
-	    if (*p) result+=c,p++; 
-	  }
-	  break;
 	case '\'': // skip char literals
-	  {
-	    result+=c;
-	    char pc=c;
-	    c=*++p;
-	    while (*p && (c!='\'' || pc=='\\')) // no end quote
-	    {
-	      result+=c;
-	      c=*++p;
-	    }
-	    if (*p) result+=c,p++; 
-	  }
+          p = processUntilMatchingTerminator(p,result);
 	  break;
 	default:
 	  {
@@ -1402,7 +1437,7 @@ void addDefine()
   //printf("addDefine %s %s\n",g_defName.data(),g_defArgsStr.data());
   //ArgumentList *al = new ArgumentList;
   //stringToArgumentList(g_defArgsStr,al);
-  MemberDef *md=new MemberDef(
+  MemberDef *md=createMemberDef(
       g_yyFileName,g_yyLineNr-g_yyMLines,g_yyColNr,
       "#define",g_defName,g_defArgsStr,0,
       Public,Normal,FALSE,Member,MemberType_Define,0,0,"");
@@ -2185,6 +2220,7 @@ CHARLIT   (("'"\\[0-7]{1,3}"'")|("'"\\."'")|("'"[^'\\\n]{1,4}"'"))
     					  BEGIN(DefinedExpr1);
     					}
 <Guard>{ID}				{ g_guardExpr+=yytext; }
+<Guard>"@"                              { g_guardExpr+="@@"; }
 <Guard>.				{ g_guardExpr+=*yytext; }
 <Guard>\n				{
   					  unput(*yytext);

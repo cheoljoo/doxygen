@@ -299,20 +299,21 @@ void XmlDocVisitor::visit(DocInclude *inc)
       { 
          m_t << "<programlisting filename=\"" << inc->file() << "\">";
          QFileInfo cfi( inc->file() );
-         FileDef fd( cfi.dirPath().utf8(), cfi.fileName().utf8() );
+         FileDef *fd = createFileDef( cfi.dirPath().utf8(), cfi.fileName().utf8() );
          Doxygen::parserManager->getParser(inc->extension())
                                ->parseCode(m_ci,inc->context(),
                                            inc->text(),
                                            langExt,
                                            inc->isExample(),
                                            inc->exampleFile(),
-                                           &fd,   // fileDef,
+                                           fd,   // fileDef,
                                            -1,    // start line
                                            -1,    // end line
                                            FALSE, // inline fragment
                                            0,     // memberDef
                                            TRUE   // show line numbers
 					   );
+         delete fd;
          m_t << "</programlisting>"; 
       }
       break;    
@@ -334,6 +335,7 @@ void XmlDocVisitor::visit(DocInclude *inc)
       m_t << "</programlisting>"; 
       break;
     case DocInclude::DontInclude: 
+    case DocInclude::DontIncWithLines: 
       break;
     case DocInclude::HtmlInclude: 
       if (inc->isBlock())
@@ -373,7 +375,7 @@ void XmlDocVisitor::visit(DocInclude *inc)
       {
          m_t << "<programlisting filename=\"" << inc->file() << "\">";
          QFileInfo cfi( inc->file() );
-         FileDef fd( cfi.dirPath().utf8(), cfi.fileName().utf8() );
+         FileDef *fd = createFileDef( cfi.dirPath().utf8(), cfi.fileName().utf8() );
          Doxygen::parserManager->getParser(inc->extension())
                                ->parseCode(m_ci,
                                            inc->context(),
@@ -381,13 +383,14 @@ void XmlDocVisitor::visit(DocInclude *inc)
                                            langExt,
                                            inc->isExample(),
                                            inc->exampleFile(), 
-                                           &fd,
+                                           fd,
                                            lineBlock(inc->text(),inc->blockId()),
                                            -1,    // endLine
                                            FALSE, // inlineFragment
                                            0,     // memberDef
                                            TRUE   // show line number
                                           );
+         delete fd;
          m_t << "</programlisting>"; 
       }
       break;
@@ -418,10 +421,25 @@ void XmlDocVisitor::visit(DocIncOperator *op)
     popEnabled();
     if (!m_hide) 
     {
+      FileDef *fd;
+      if (!op->includeFileName().isEmpty())
+      {
+        QFileInfo cfi( op->includeFileName() );
+        fd = createFileDef( cfi.dirPath().utf8(), cfi.fileName().utf8() );
+      }
+
       Doxygen::parserManager->getParser(m_langExt)
                             ->parseCode(m_ci,op->context(),
                                         op->text(),langExt,op->isExample(),
-                                        op->exampleFile());
+                                        op->exampleFile(),
+                                        fd,     // fileDef
+                                        op->line(),    // startLine
+                                        -1,    // endLine
+                                        FALSE, // inline fragment
+                                        0,     // memberDef
+                                        op->showLineNo()  // show line numbers
+                                       );
+      if (fd) delete fd;
     }
     pushEnabled();
     m_hide=TRUE;

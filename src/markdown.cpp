@@ -138,6 +138,7 @@ static QCString escapeSpecialChars(const QCString &s)
       case '>':  if (!insideQuote) { growBuf.addChar('\\'); } growBuf.addChar('>'); break;
       case '\\': if (!insideQuote) { growBuf.addChar('\\'); } growBuf.addChar('\\'); break;
       case '@':  if (!insideQuote) { growBuf.addChar('\\'); } growBuf.addChar('@'); break;
+      case '#':  if (!insideQuote) { growBuf.addChar('\\'); } growBuf.addChar('#'); break;
       default:   growBuf.addChar(c); break;
     }
     pc=c;
@@ -523,7 +524,7 @@ static int processQuoted(GrowBuf &out,const char *data,int,int size)
 /** Process a HTML tag. Note that <pre>..</pre> are treated specially, in
  *  the sense that all code inside is written unprocessed
  */
-static int processHtmlTag(GrowBuf &out,const char *data,int offset,int size)
+static int processHtmlTagWrite(GrowBuf &out,const char *data,int offset,int size,bool doWrite)
 {
   if (offset>0 && data[-1]=='\\') return 0; // escaped <
 
@@ -546,7 +547,7 @@ static int processHtmlTag(GrowBuf &out,const char *data,int offset,int size)
             tolower(data[i+2])=='p' && tolower(data[i+3])=='r' &&
             tolower(data[i+4])=='e' && tolower(data[i+5])=='>')
         { // found </pre> tag, copy from start to end of tag
-          out.addStr(data,i+6);
+          if (doWrite) out.addStr(data,i+6);
           //printf("found <pre>..</pre> [%d..%d]\n",0,i+6);
           return i+6;
         }
@@ -569,13 +570,13 @@ static int processHtmlTag(GrowBuf &out,const char *data,int offset,int size)
       if (data[i]=='/' && i<size-1 && data[i+1]=='>') // <bla/>
       {
         //printf("Found htmlTag={%s}\n",QCString(data).left(i+2).data());
-        out.addStr(data,i+2);
+        if (doWrite) out.addStr(data,i+2);
         return i+2;
       }
       else if (data[i]=='>') // <bla>
       {
         //printf("Found htmlTag={%s}\n",QCString(data).left(i+1).data());
-        out.addStr(data,i+1);
+        if (doWrite) out.addStr(data,i+1);
         return i+1;
       }
       else if (data[i]==' ') // <bla attr=...
@@ -595,7 +596,7 @@ static int processHtmlTag(GrowBuf &out,const char *data,int offset,int size)
           else if (!insideAttr && data[i]=='>') // found end of tag
           {
             //printf("Found htmlTag={%s}\n",QCString(data).left(i+1).data());
-            out.addStr(data,i+1);
+            if (doWrite) out.addStr(data,i+1);
             return i+1;
           }
           i++;
@@ -605,6 +606,10 @@ static int processHtmlTag(GrowBuf &out,const char *data,int offset,int size)
   }
   //printf("Not a valid html tag\n");
   return 0;
+}
+static int processHtmlTag(GrowBuf &out,const char *data,int offset,int size)
+{
+  return processHtmlTagWrite(out,data,offset,size,true);
 }
 
 static int processEmphasis(GrowBuf &out,const char *data,int offset,int size)
@@ -910,7 +915,7 @@ static int processLink(GrowBuf &out,const char *data,int,int size)
   {
     SrcLangExt lang = getLanguageFromFileName(link);
     int lp=-1;
-    if ((lp=link.find("@ref "))!=-1 || (lp=link.find("\\ref "))!=-1 || lang==SrcLangExt_Markdown) 
+    if ((lp=link.find("@ref "))!=-1 || (lp=link.find("\\ref "))!=-1 || (lang==SrcLangExt_Markdown && !isURL(link))) 
         // assume doxygen symbol link
     {
       if (lp==-1) // link to markdown page
@@ -1886,10 +1891,16 @@ static int writeTableBlock(GrowBuf &out,const char *data,int size)
 static int hasLineBreak(const char *data,int size)
 {
   int i=0;
-  while (i<size && data[i]!='\n') i++;
+  int j=0;
+  // search for end of line and also check if it is not a completely blank
+  while (i<size && data[i]!='\n')
+  {
+    if (data[i]!=' ' && data[i]!='\t') j++; // some non whitespace
+    i++;
+  }
   if (i>=size) return 0; // empty line
   if (i<2) return 0; // not long enough
-  return (data[i-1]==' ' && data[i-2]==' ');
+  return (j>0 && data[i-1]==' ' && data[i-2]==' '); // non blank line with at two spaces at the end
 }
 
 
@@ -1947,7 +1958,7 @@ void writeOneLineHeaderOrRuler(GrowBuf &out,const char *data,int size)
     out.addStr(data,size);
     if (hasLineBreak(data,size))
     {
-      out.addStr("\n");
+      out.addStr("<br>");
     }
   }
 }
@@ -2086,17 +2097,9 @@ static void findEndOfLine(GrowBuf &out,const char *data,int size,
           {
             if (qstrncmp(&data[end+1],endBlockName,l)==0)
             {
-              if (pi!=-1) // output previous line if available
-              {
-                //printf("feol out={%s}\n",QCString(data+pi).left(i-pi).data());
-                out.addStr(data+pi,i-pi);
-              }
               // found end marker, skip over this block
               //printf("feol.block out={%s}\n",QCString(data+i).left(end+l+1-i).data());
-              out.addStr(data+i,end+l+1-i);
-              pi=-1;
-              i=end+l+1; // continue after block
-              end=i+1;
+              end = end + l + 2;
               break;
             }
           }
@@ -2110,16 +2113,8 @@ static void findEndOfLine(GrowBuf &out,const char *data,int size,
       if (tolower(data[end])=='p' && tolower(data[end+1])=='r' &&
           tolower(data[end+2])=='e' && data[end+3]=='>') // <pre> tag
       {
-        if (pi!=-1) // output previous line if available
-        {
-          out.addStr(data+pi,i-pi);
-        }
-        // output part until <pre>
-        out.addStr(data+i,end-1-i); 
-        // output part until </pre>
-        i = end-1 + processHtmlTag(out,data+end-1,end-1,size-end+1);
-        pi=-1;
-        end = i+1;
+        // skip part until including </pre>
+        end  = end + processHtmlTagWrite(out,data+end-1,end-1,size-end+1,false) + 2;
         break;
       }
       else
@@ -2282,28 +2277,6 @@ static QCString processBlocks(const QCString &s,int indent)
             out.addStr(" ");
             out.addStr(header);
             out.addStr("\n\n");
-            SectionInfo *si = Doxygen::sectionDict->find(id);
-            if (si)
-            {
-              if (si->lineNr != -1)
-              {
-                warn(g_fileName,g_lineNr,"multiple use of section label '%s', (first occurrence: %s, line %d)",header.data(),si->fileName.data(),si->lineNr);
-              }
-              else
-              {
-                warn(g_fileName,g_lineNr,"multiple use of section label '%s', (first occurrence: %s)",header.data(),si->fileName.data());
-              }
-            }
-            else
-            {
-              si = new SectionInfo(g_fileName,g_lineNr,id,header,
-                      level==1 ? SectionInfo::Section : SectionInfo::Subsection,level);
-              if (g_current)
-              {
-                g_current->anchors->append(si);
-              }
-              Doxygen::sectionDict->append(id,si);
-            }
           }
           else
           {
@@ -2535,7 +2508,9 @@ QCString processMarkdown(const QCString &fileName,const int lineNr,Entry *e,cons
   out.clear();
   int refIndent;
   // for replace tabs by spaces
-  QCString s = detab(input,refIndent);
+  QCString s = input;
+  if (s.at(s.length()-1)!='\n') s += "\n"; // see PR #6766
+  s = detab(s,refIndent);
   //printf("======== DeTab =========\n---- output -----\n%s\n---------\n",s.data());
   // then process quotation blocks (as these may contain other blocks)
   s = processQuotations(s,refIndent);
@@ -2654,9 +2629,9 @@ void MarkdownFileParser::parseCode(CodeOutputInterface &codeOutIntf,
                int startLine,
                int endLine,
                bool inlineFragment,
-               MemberDef *memberDef,
+               const MemberDef *memberDef,
                bool showLineNumbers,
-               Definition *searchCtx,
+               const Definition *searchCtx,
                bool collectXRefs
               )
 {

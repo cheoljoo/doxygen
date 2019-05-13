@@ -153,7 +153,7 @@ void DocbookCodeGenerator::writeCodeLink(const char *ref,const char *file,
 {
   Docbook_DB(("(writeCodeLink)\n"));
   writeDocbookLink(m_t,ref,file,anchor,name,tooltip);
-  m_col+=strlen(name);
+  m_col+=(int)strlen(name);
 }
 void DocbookCodeGenerator::writeCodeLinkLine(const char *ref,const char *file,
     const char *anchor,const char *name,
@@ -164,7 +164,7 @@ void DocbookCodeGenerator::writeCodeLinkLine(const char *ref,const char *file,
   m_t << "_1l";
   writeDocbookString(m_t,name);
   m_t << "\"/>";
-  m_col+=strlen(name);
+  m_col+=(int)strlen(name);
 }
 void DocbookCodeGenerator::writeTooltip(const char *, const DocLinkInfo &, const char *,
                   const char *, const SourceLinkInfo &, const SourceLinkInfo &
@@ -230,7 +230,7 @@ void DocbookCodeGenerator::writeLineNumber(const char *ref,const char *fileName,
   }
 
 }
-void DocbookCodeGenerator::setCurrentDoc(Definition *,const char *,bool)
+void DocbookCodeGenerator::setCurrentDoc(const Definition *,const char *,bool)
 {
 }
 void DocbookCodeGenerator::addWord(const char *,bool)
@@ -537,7 +537,7 @@ DB_GEN_C2("IndexSections " << is)
       {
         t << "</title>" << endl;
         ClassSDict::Iterator cli(*Doxygen::classSDict);
-        ClassDef *cd=0;
+        const ClassDef *cd=0;
         bool found=FALSE;
         for (cli.toFirst();(cd=cli.current()) && !found;++cli)
         {
@@ -572,7 +572,7 @@ DB_GEN_C2("IndexSections " << is)
         for (fnli.toFirst();(fn=fnli.current());++fnli)
         {
           FileNameIterator fni(*fn);
-          FileDef *fd;
+          const FileDef *fd;
           for (;(fd=fni.current());++fni)
           {
             if (fd->isLinkableInProject())
@@ -648,7 +648,7 @@ DB_GEN_C
     }
   }
 }
-void DocbookGenerator::writeDoc(DocNode *n,Definition *ctx,MemberDef *)
+void DocbookGenerator::writeDoc(DocNode *n,const Definition *ctx,const MemberDef *)
 {
 DB_GEN_C
   DocbookDocVisitor *visitor =

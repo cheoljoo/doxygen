@@ -43,6 +43,10 @@ add_custom_command(
     OUTPUT ${GENERATED_SRC}/configvalues.h
 )
 set_source_files_properties(${GENERATED_SRC}/configvalues.h PROPERTIES GENERATED 1)
+add_custom_target(
+    generate_configvalues_header
+    DEPENDS ${GENERATED_SRC}/configvalues.h
+)
 
 # configvalues.cpp
 add_custom_command(
@@ -204,12 +208,10 @@ add_library(_doxygen STATIC
     latexgen.cpp
     layout.cpp
     lodepng.cpp
-    logos.cpp
     mandocvisitor.cpp
     mangen.cpp
     sqlite3gen.cpp
     markdown.cpp
-    marshal.cpp
     memberdef.cpp
     membergroup.cpp
     memberlist.cpp
@@ -230,7 +232,6 @@ add_library(_doxygen STATIC
     rtfgen.cpp
     rtfstyle.cpp
     searchindex.cpp
-    store.cpp
     tagreader.cpp
     template.cpp
     textdocvisitor.cpp

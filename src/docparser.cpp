@@ -87,7 +87,7 @@ static const char *sectionLevelToName[] =
 //---------------------------------------------------------------------------
 
 // Parser state: global variables during a call to validatingParseDoc
-static Definition *           g_scope;
+static const Definition *     g_scope;
 static QCString               g_context;
 static bool                   g_inSeeBlock;
 static bool                   g_xmlComment;
@@ -102,7 +102,7 @@ static QCString               g_relPath;
 static bool                   g_hasParamCommand;
 static bool                   g_hasReturnCommand;
 static QDict<void>            g_paramsFound;
-static MemberDef *            g_memberDef;
+static const MemberDef *      g_memberDef;
 static bool                   g_isExample;
 static QCString               g_exampleName;
 static SectionDict *          g_sectionDict;
@@ -112,13 +112,15 @@ static QCString               g_includeFileName;
 static QCString               g_includeFileText;
 static uint                   g_includeFileOffset;
 static uint                   g_includeFileLength;
+static uint                   g_includeFileLine;
+static bool                   g_includeFileShowLineNo;
 
 
 /** Parser's context to store all global variables. 
  */
 struct DocParserContext
 {
-  Definition *scope;
+  const Definition *scope;
   QCString context;
   bool inSeeBlock;
   bool xmlComment;
@@ -133,7 +135,7 @@ struct DocParserContext
 
   bool         hasParamCommand;
   bool         hasReturnCommand;
-  MemberDef *  memberDef;
+  const MemberDef *  memberDef;
   QDict<void>  paramsFound;
   bool         isExample;
   QCString     exampleName;
@@ -143,6 +145,8 @@ struct DocParserContext
   QCString  includeFileText;
   uint     includeFileOffset;
   uint     includeFileLength;
+  uint     includeFileLine;
+  bool     includeFileLineNo;
 
   TokenInfo *token;
 };
@@ -190,6 +194,8 @@ static void docParserPushContext(bool saveParamInfo=TRUE)
   ctx->includeFileText    = g_includeFileText;
   ctx->includeFileOffset  = g_includeFileOffset;
   ctx->includeFileLength  = g_includeFileLength;
+  ctx->includeFileLine    = g_includeFileLine;
+  ctx->includeFileLineNo  = g_includeFileShowLineNo;
   
   ctx->token              = g_token;
   g_token = new TokenInfo;
@@ -228,6 +234,8 @@ static void docParserPopContext(bool keepParamInfo=FALSE)
   g_includeFileText     = ctx->includeFileText;
   g_includeFileOffset   = ctx->includeFileOffset;
   g_includeFileLength   = ctx->includeFileLength;
+  g_includeFileLine     = ctx->includeFileLine;
+  g_includeFileShowLineNo   = ctx->includeFileLineNo;
 
   delete g_token;
   g_token               = ctx->token;
@@ -335,11 +343,11 @@ static QCString findAndCopyImage(const char *fileName,DocImage::Type type, bool 
               "could not write output image %s",qPrint(outputFile));
         }
       }
-      else
-      {
-        warn(g_fileName,doctokenizerYYlineno,
-             "Prevented to copy file %s onto itself!\n",qPrint(inputFile));
-      }
+      //else
+      //{
+      //  warn(g_fileName,doctokenizerYYlineno,
+      //       "Prevented to copy file %s onto itself!\n",qPrint(inputFile));
+      //}
     }
     else
     {
@@ -398,9 +406,9 @@ static void checkArgumentName(const QCString &name,bool isParam)
 {                
   if (!Config_getBool(WARN_IF_DOC_ERROR)) return;
   if (g_memberDef==0) return; // not a member
-  ArgumentList *al=g_memberDef->isDocsForDefinition() ? 
-		   g_memberDef->argumentList() :
-                   g_memberDef->declArgumentList();
+  const ArgumentList *al=g_memberDef->isDocsForDefinition() ?
+	                 g_memberDef->argumentList() :
+                         g_memberDef->declArgumentList();
   SrcLangExt lang = g_memberDef->getLanguage();
   //printf("isDocsForDefinition()=%d\n",g_memberDef->isDocsForDefinition());
   if (al==0) return; // no argument list
@@ -413,7 +421,7 @@ static void checkArgumentName(const QCString &name,bool isParam)
     if (lang==SrcLangExt_Fortran) aName=aName.lower();
     //printf("aName=`%s'\n",aName.data());
     ArgumentListIterator ali(*al);
-    Argument *a;
+    const Argument *a;
     bool found=FALSE;
     for (ali.toFirst();(a=ali.current());++ali)
     {
@@ -468,14 +476,14 @@ static void checkUnOrMultipleDocumentedParams()
 {
   if (g_memberDef && g_hasParamCommand && Config_getBool(WARN_IF_DOC_ERROR))
   {
-    ArgumentList *al=g_memberDef->isDocsForDefinition() ? 
+    const ArgumentList *al=g_memberDef->isDocsForDefinition() ? 
       g_memberDef->argumentList() :
       g_memberDef->declArgumentList();
     SrcLangExt lang = g_memberDef->getLanguage();
     if (al!=0)
     {
       ArgumentListIterator ali(*al);
-      Argument *a;
+      const Argument *a;
       bool found=FALSE;
       for (ali.toFirst();(a=ali.current());++ali)
       {
@@ -549,106 +557,6 @@ static void checkUnOrMultipleDocumentedParams()
     }
   }
 }
-
-/*! Check if a member has documentation for its parameter and or return
- *  type, if applicable. If found this will be stored in the member, this
- *  is needed as a member can have brief and detailed documentation, while
- *  only one of these needs to document the parameters.
- */
-static void detectNoDocumentedParams()
-{
-  if (g_memberDef && Config_getBool(WARN_NO_PARAMDOC))
-  {
-    ArgumentList *al     = g_memberDef->argumentList();
-    ArgumentList *declAl = g_memberDef->declArgumentList();
-    QCString returnType   = g_memberDef->typeString();
-    bool isPython = g_memberDef->getLanguage()==SrcLangExt_Python;
-
-    if (!g_memberDef->hasDocumentedParams() &&
-        g_hasParamCommand)
-    {
-      //printf("%s->setHasDocumentedParams(TRUE);\n",g_memberDef->name().data());
-      g_memberDef->setHasDocumentedParams(TRUE);
-    }
-    else if (!g_memberDef->hasDocumentedParams())
-    {
-      bool allDoc=TRUE; // no parameter => all parameters are documented
-      if ( // member has parameters
-             al!=0 &&       // but the member has a parameter list
-             al->count()>0  // with at least one parameter (that is not void)
-         )
-      {
-        ArgumentListIterator ali(*al);
-        Argument *a;
-
-        // see if all parameters have documentation
-        for (ali.toFirst();(a=ali.current()) && allDoc;++ali)
-        {
-          if (!a->name.isEmpty() && a->type!="void" &&
-              !(isPython && (a->name=="self" || a->name=="cls"))
-             )
-          {
-            allDoc = !a->docs.isEmpty();
-          }
-          //printf("a->type=%s a->name=%s doc=%s\n",
-          //        a->type.data(),a->name.data(),a->docs.data());
-        }
-        if (!allDoc && declAl!=0) // try declaration arguments as well
-        {
-          allDoc=TRUE;
-          ArgumentListIterator ali(*declAl);
-          Argument *a;
-          for (ali.toFirst();(a=ali.current()) && allDoc;++ali)
-          {
-            if (!a->name.isEmpty() && a->type!="void" &&
-                !(isPython && (a->name=="self" || a->name=="cls"))
-               )
-            {
-              allDoc = !a->docs.isEmpty();
-            }
-            //printf("a->name=%s doc=%s\n",a->name.data(),a->docs.data());
-          }
-        }
-      }
-      if (allDoc) 
-      {
-        //printf("%s->setHasDocumentedParams(TRUE);\n",g_memberDef->name().data());
-        g_memberDef->setHasDocumentedParams(TRUE);
-      }
-    }
-    //printf("Member %s hadDocumentedReturnType()=%d hasReturnCommand=%d\n",
-    //    g_memberDef->name().data(),g_memberDef->hasDocumentedReturnType(),g_hasReturnCommand);
-    if (!g_memberDef->hasDocumentedReturnType() && // docs not yet found
-        g_hasReturnCommand)
-    {
-      g_memberDef->setHasDocumentedReturnType(TRUE);
-    }
-    else if ( // see if return needs to documented 
-        g_memberDef->hasDocumentedReturnType() ||
-        returnType.isEmpty()         || // empty return type
-        returnType.find("void")!=-1  || // void return type
-        returnType.find("subroutine")!=-1 || // fortran subroutine
-        g_memberDef->isConstructor() || // a constructor
-        g_memberDef->isDestructor()     // or destructor
-       )
-    {
-      g_memberDef->setHasDocumentedReturnType(TRUE);
-    }
-    else if ( // see if return type is documented in a function w/o return type
-        g_memberDef->hasDocumentedReturnType() &&
-        (returnType.isEmpty()              || // empty return type
-         returnType.find("void")!=-1       || // void return type
-         returnType.find("subroutine")!=-1 || // fortran subroutine
-         g_memberDef->isConstructor()      || // a constructor
-         g_memberDef->isDestructor()          // or destructor
-        )
-       )
-    {
-      warn_doc_error(g_fileName,doctokenizerYYlineno,"documented empty return type");
-    }
-  }
-}
-
 
 //---------------------------------------------------------------------------
 
@@ -747,7 +655,7 @@ static bool insideTable(DocNode *n)
 static bool findDocsForMemberOrCompound(const char *commandName,
                                  QCString *pDoc,
                                  QCString *pBrief,
-                                 Definition **pDef)
+                                 const Definition **pDef)
 {
   //printf("findDocsForMemberOrCompound(%s)\n",commandName);
   *pDoc="";
@@ -781,12 +689,12 @@ static bool findDocsForMemberOrCompound(const char *commandName,
   QCString args=cmdArg.right(l-funcStart);
 
   // try if the link is to a member
-  MemberDef    *md=0;
-  ClassDef     *cd=0;
-  FileDef      *fd=0;
-  NamespaceDef *nd=0;
-  GroupDef     *gd=0;
-  PageDef      *pd=0;
+  const MemberDef    *md=0;
+  const ClassDef     *cd=0;
+  const FileDef      *fd=0;
+  const NamespaceDef *nd=0;
+  const GroupDef     *gd=0;
+  const PageDef      *pd=0;
   bool found = getDefs(
       g_context.find('.')==-1?g_context.data():"", // `find('.') is a hack to detect files
       name,
@@ -1037,6 +945,11 @@ static int handleAHref(DocNode *parent,QList<DocNode> &children,const HtmlAttrib
     {
       if (!opt->value.isEmpty())
       {
+        // copy attributes
+        HtmlAttribList attrList = tagHtmlAttribs;
+        // and remove the href attribute
+        bool result = attrList.remove(index);
+        ASSERT(result);
         DocAnchor *anc = new DocAnchor(parent,opt->value,TRUE);
         children.append(anc);
         break; // stop looking for other tag attribs
@@ -1112,8 +1025,8 @@ static void handleLinkedWord(DocNode *parent,QList<DocNode> &children,bool ignor
 
   // ------- try to turn the word 'name' into a link
 
-  Definition *compound=0;
-  MemberDef  *member=0;
+  const Definition *compound=0;
+  const MemberDef  *member=0;
   int len = g_token->name.length();
   ClassDef *cd=0;
   bool ambig;
@@ -1152,7 +1065,7 @@ static void handleLinkedWord(DocNode *parent,QList<DocNode> &children,bool ignor
       }
       else if (compound->definitionType()==Definition::TypeGroup)
       {
-        name=((GroupDef*)compound)->groupTitle();
+        name=(dynamic_cast<const GroupDef*>(compound))->groupTitle();
       }
       children.append(new 
           DocLinkedWord(parent,name,
@@ -1164,7 +1077,7 @@ static void handleLinkedWord(DocNode *parent,QList<DocNode> &children,bool ignor
                      );
     }
     else if (compound->definitionType()==Definition::TypeFile &&
-             ((FileDef*)compound)->generateSourceFile()
+             (dynamic_cast<const FileDef*>(compound))->generateSourceFile()
             ) // undocumented file that has source code we can link to
     {
       children.append(new 
@@ -1929,7 +1842,7 @@ DocLinkedWord::DocLinkedWord(DocNode *parent,const QCString &word,
 
 //---------------------------------------------------------------------------
 
-DocAnchor::DocAnchor(DocNode *parent,const QCString &id,bool newAnchor) 
+DocAnchor::DocAnchor(DocNode *parent,const QCString &id,bool newAnchor)
 {
   m_parent = parent; 
   if (id.isEmpty())
@@ -1999,6 +1912,8 @@ void DocInclude::parse()
   DBG(("DocInclude::parse(file=%s,text=%s)\n",qPrint(m_file),qPrint(m_text)));
   switch(m_type)
   {
+    case DontIncWithLines:
+      // fall through
     case IncWithLines:
       // fall through
     case Include:
@@ -2009,6 +1924,8 @@ void DocInclude::parse()
       g_includeFileText   = m_text;
       g_includeFileOffset = 0;
       g_includeFileLength = m_text.length();
+      g_includeFileLine   = 0;
+      g_includeFileShowLineNo = (m_type == DontIncWithLines || m_type == IncWithLines);
       //printf("g_includeFile=<<%s>>\n",g_includeFileText.data());
       break;
     case VerbInclude: 
@@ -2043,10 +1960,18 @@ void DocInclude::parse()
 
 void DocIncOperator::parse()
 {
+  if (g_includeFileName.isEmpty())
+  {
+    warn_doc_error(g_fileName,doctokenizerYYlineno,
+                   "No previous '\\include' or '\\dontinclude' command for '\\%s' present",
+                   typeAsString());
+  }
+
   m_includeFileName = g_includeFileName;
   const char *p = g_includeFileText;
   uint l = g_includeFileLength;
   uint o = g_includeFileOffset;
+  uint il = g_includeFileLine;
   DBG(("DocIncOperator::parse() text=%s off=%d len=%d\n",qPrint(p),o,l));
   uint so = o,bo;
   bool nonEmpty = FALSE;
@@ -2058,6 +1983,7 @@ void DocIncOperator::parse()
         char c = p[o];
         if (c=='\n') 
         {
+          g_includeFileLine++;
           if (nonEmpty) break; // we have a pattern to match
           so=o+1; // no pattern, skip empty line
         }
@@ -2069,10 +1995,12 @@ void DocIncOperator::parse()
       }
       if (g_includeFileText.mid(so,o-so).find(m_pattern)!=-1)
       {
+        m_line  = il;
         m_text = g_includeFileText.mid(so,o-so);
         DBG(("DocIncOperator::parse() Line: %s\n",qPrint(m_text)));
       }
       g_includeFileOffset = QMIN(l,o+1); // set pointer to start of new line
+      m_showLineNo = g_includeFileShowLineNo;
       break;
     case SkipLine:
       while (o<l)
@@ -2083,6 +2011,7 @@ void DocIncOperator::parse()
           char c = p[o];
           if (c=='\n')
           {
+            g_includeFileLine++;
             if (nonEmpty) break; // we have a pattern to match
             so=o+1; // no pattern, skip empty line
           }
@@ -2094,6 +2023,7 @@ void DocIncOperator::parse()
         }
         if (g_includeFileText.mid(so,o-so).find(m_pattern)!=-1)
         {
+          m_line  = il;
           m_text = g_includeFileText.mid(so,o-so);
           DBG(("DocIncOperator::parse() SkipLine: %s\n",qPrint(m_text)));
           break;
@@ -2101,6 +2031,7 @@ void DocIncOperator::parse()
         o++; // skip new line
       }
       g_includeFileOffset = QMIN(l,o+1); // set pointer to start of new line
+      m_showLineNo = g_includeFileShowLineNo;
       break;
     case Skip:
       while (o<l)
@@ -2111,6 +2042,7 @@ void DocIncOperator::parse()
           char c = p[o];
           if (c=='\n')
           {
+            g_includeFileLine++;
             if (nonEmpty) break; // we have a pattern to match
             so=o+1; // no pattern, skip empty line
           }
@@ -2127,6 +2059,7 @@ void DocIncOperator::parse()
         o++; // skip new line
       }
       g_includeFileOffset = so; // set pointer to start of new line
+      m_showLineNo = g_includeFileShowLineNo;
       break;
     case Until:
       bo=o;
@@ -2138,6 +2071,7 @@ void DocIncOperator::parse()
           char c = p[o];
           if (c=='\n')
           {
+            g_includeFileLine++;
             if (nonEmpty) break; // we have a pattern to match
             so=o+1; // no pattern, skip empty line
           }
@@ -2149,6 +2083,7 @@ void DocIncOperator::parse()
         }
         if (g_includeFileText.mid(so,o-so).find(m_pattern)!=-1)
         {
+          m_line  = il;
           m_text = g_includeFileText.mid(bo,o-bo);
           DBG(("DocIncOperator::parse() Until: %s\n",qPrint(m_text)));
           break;
@@ -2156,6 +2091,7 @@ void DocIncOperator::parse()
         o++; // skip new line
       }
       g_includeFileOffset = QMIN(l,o+1); // set pointer to start of new line
+      m_showLineNo = g_includeFileShowLineNo;
       break;
   }
 }
@@ -2165,7 +2101,7 @@ void DocIncOperator::parse()
 void DocCopy::parse(QList<DocNode> &children)
 {
   QCString doc,brief;
-  Definition *def;
+  const Definition *def = 0;
   if (findDocsForMemberOrCompound(m_link,&doc,&brief,&def))
   {
     if (g_copyStack.findRef(def)==-1) // definition not parsed earlier
@@ -2511,7 +2447,7 @@ DocRef::DocRef(DocNode *parent,const QCString &target,const QCString &context) :
    m_refType(Unknown), m_isSubPage(FALSE)
 {
   m_parent = parent; 
-  Definition  *compound = 0;
+  const Definition  *compound = 0;
   QCString     anchor;
   //printf("DocRef::DocRef(target=%s,context=%s)\n",target.data(),context.data());
   ASSERT(!target.isEmpty());
@@ -2564,16 +2500,16 @@ DocRef::DocRef(DocNode *parent,const QCString &target,const QCString &context) :
     {
       if (anchor.isEmpty() &&                                  /* compound link */
           compound->definitionType()==Definition::TypeGroup && /* is group */
-          ((GroupDef *)compound)->groupTitle()                 /* with title */
+          (dynamic_cast<const GroupDef *>(compound))->groupTitle()                 /* with title */
          )
       {
-        m_text=((GroupDef *)compound)->groupTitle(); // use group's title as link
+        m_text=(dynamic_cast<const GroupDef *>(compound))->groupTitle(); // use group's title as link
       }
       else if (compound->definitionType()==Definition::TypeMember &&
-          ((MemberDef*)compound)->isObjCMethod())
+          (dynamic_cast<const MemberDef*>(compound))->isObjCMethod())
       {
         // Objective C Method
-        MemberDef *member = (MemberDef*)compound;
+        const MemberDef *member = dynamic_cast<const MemberDef*>(compound);
         bool localLink = g_memberDef ? member->getClassDef()==g_memberDef->getClassDef() : FALSE;
         m_text = member->objCMethodName(localLink,g_inSeeBlock);
       }
@@ -2585,7 +2521,7 @@ DocRef::DocRef(DocNode *parent,const QCString &target,const QCString &context) :
       return;
     }
     else if (compound && compound->definitionType()==Definition::TypeFile &&
-             ((FileDef*)compound)->generateSourceFile()
+             (dynamic_cast<const FileDef*>(compound))->generateSourceFile()
             ) // undocumented file that has source code we can link to
     {
       m_file = compound->getSourceFileBase();
@@ -2707,7 +2643,7 @@ DocCite::DocCite(DocNode *parent,const QCString &target,const QCString &) //cont
 DocLink::DocLink(DocNode *parent,const QCString &target) 
 {
   m_parent = parent;
-  Definition *compound = 0;
+  const Definition *compound = 0;
   QCString anchor;
   m_refText = target;
   m_relPath = g_relPath;
@@ -2724,8 +2660,8 @@ DocLink::DocLink(DocNode *parent,const QCString &target)
       m_file = compound->getOutputFileBase();
       m_ref  = compound->getReference();
     }
-    else if (compound && compound->definitionType()==Definition::TypeFile && 
-             ((FileDef*)compound)->generateSourceFile()
+    else if (compound && compound->definitionType()==Definition::TypeFile &&
+             (dynamic_cast<const FileDef*>(compound))->generateSourceFile()
             ) // undocumented file that has source code we can link to
     {
       m_file = compound->getSourceFileBase();
@@ -3073,7 +3009,7 @@ int DocHtmlHeader::parse()
             }
             else if (tagId==HTML_BR)
             {
-              DocLineBreak *lb = new DocLineBreak(this);
+              DocLineBreak *lb = new DocLineBreak(this,g_token->attribs);
               m_children.append(lb);
             }
             else
@@ -5264,6 +5200,10 @@ void DocPara::handleInclude(const QCString &cmdName,DocInclude::Type t)
     {
       t = DocInclude::SnipWithLines;
     }
+    else if (t==DocInclude::DontInclude && optList.contains("lineno"))
+    {
+      t = DocInclude::DontIncWithLines;
+    }
     else if (t==DocInclude::Include && optList.contains("doc"))
     {
       t = DocInclude::IncludeDoc;
@@ -5424,7 +5364,7 @@ void DocPara::handleInheritDoc()
     MemberDef *reMd = g_memberDef->reimplements();
     if (reMd) // member from which was inherited.
     {
-      MemberDef *thisMd = g_memberDef;
+      const MemberDef *thisMd = g_memberDef;
       //printf("{InheritDocs:%s=>%s}\n",g_memberDef->qualifiedName().data(),reMd->qualifiedName().data());
       docParserPushContext();
       g_scope=reMd->getOuterScope();
@@ -6080,13 +6020,13 @@ int DocPara::handleHtmlStartTag(const QCString &tagName,const HtmlAttribList &ta
       break;
     case HTML_BR:
       {
-        DocLineBreak *lb = new DocLineBreak(this);
+        DocLineBreak *lb = new DocLineBreak(this,tagHtmlAttribs);
         m_children.append(lb);
       }
       break;
     case HTML_HR:
       {
-        DocHorRuler *hr = new DocHorRuler(this);
+        DocHorRuler *hr = new DocHorRuler(this,tagHtmlAttribs);
         m_children.append(hr);
       }
       break;
@@ -6861,6 +6801,11 @@ endparagraph:
   DocNode *n = g_nodeStack.pop();
   ASSERT(n==this);
   DBG(("DocPara::parse() end retval=%x\n",retval));
+  if (!g_token->endTag && n->kind()==DocNode::Kind_Para &&
+      retval==TK_NEWPARA && g_token->name.lower() == "p")
+  {
+    ((DocPara *)n)->setAttribs(g_token->attribs);
+  }
   INTERNAL_ASSERT(retval==0 || retval==TK_NEWPARA || retval==TK_LISTITEM || 
          retval==TK_ENDLIST || retval>RetVal_OK 
 	);
@@ -7128,7 +7073,7 @@ void DocRoot::parse()
     DocPara *par = new DocPara(this);
     if (isFirst) { par->markFirst(); isFirst=FALSE; }
     retval=par->parse();
-    if (!par->isEmpty()) 
+    if (!par->isEmpty() || par->attribs().count()>0)
     {
       m_children.append(par);
       lastPar=par;
@@ -7321,7 +7266,7 @@ static QCString processCopyDoc(const char *data,uint &len)
         while (j<len && (data[j]==' ' || data[j]=='\t')) j++;
         // extract the argument
         QCString id = extractCopyDocId(data,j,len);
-        Definition *def;
+        const Definition *def = 0;
         QCString doc,brief;
         //printf("resolving docs='%s'\n",id.data());
         if (findDocsForMemberOrCompound(id,&doc,&brief,&def))
@@ -7510,7 +7455,7 @@ QCString getJsDirEmbedingChar(QString::Direction textDir)
 //---------------------------------------------------------------------------
 
 DocRoot *validatingParseDoc(const char *fileName,int startLine,
-                            Definition *ctx,MemberDef *md,
+                            const Definition *ctx,const MemberDef *md,
                             const char *input,bool indexWords,
                             bool isExample, const char *exampleName,
                             bool singleLine, bool linkFromIndex)
@@ -7536,12 +7481,12 @@ DocRoot *validatingParseDoc(const char *fileName,int startLine,
   }
   else if (ctx && ctx->definitionType()==Definition::TypePage)
   {
-    Definition *scope = ((PageDef*)ctx)->getPageScope();
+    const Definition *scope = (dynamic_cast<const PageDef*>(ctx))->getPageScope();
     if (scope && scope!=Doxygen::globalScope) g_context = scope->name();
   }
   else if (ctx && ctx->definitionType()==Definition::TypeGroup)
   {
-    Definition *scope = ((GroupDef*)ctx)->getGroupScope();
+    const Definition *scope = (dynamic_cast<const GroupDef*>(ctx))->getGroupScope();
     if (scope && scope!=Doxygen::globalScope) g_context = scope->name();
   }
   else
@@ -7695,7 +7640,7 @@ DocRoot *validatingParseDoc(const char *fileName,int startLine,
   }
 
   checkUnOrMultipleDocumentedParams();
-  detectNoDocumentedParams();
+  if (g_memberDef) g_memberDef->detectUndocumentedParams(g_hasParamCommand,g_hasReturnCommand);
 
   // TODO: These should be called at the end of the program.
   //doctokenizerYYcleanup();
