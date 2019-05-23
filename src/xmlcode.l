@@ -163,6 +163,7 @@ static void nextCodeLine()
 
 static void codifyLines(char *text)
 {
+printf("%s XML start [text:%s]\n",__PRETTY_FUNCTION__,text);
   char *p=text,*sp=p;
   char c;
   bool done=FALSE;
@@ -186,10 +187,12 @@ static void codifyLines(char *text)
       done=TRUE;
     }
   }
+printf("%s XML end [text:%s]\n",__PRETTY_FUNCTION__,text);
 }
 
 static void startFontClass(const char *s)
 {
+printf("%s start [s:%s]\n",__PRETTY_FUNCTION__,s);
   endFontClass();
   g_code->startFontClass(s);
   g_currentFontClass=s;

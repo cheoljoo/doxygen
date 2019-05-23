@@ -142,6 +142,7 @@ public:
 
   inline PerlModOutput &indent()
   {
+;;printf("%s\n",__PRETTY_FUNCTION__);
     if (m_pretty) {
       m_stream->add('\n');
       m_stream->add(m_spaces);
@@ -198,12 +199,14 @@ private:
 
 void PerlModOutput::iopenSave()
 {
+;;printf("%s\n",__PRETTY_FUNCTION__);
   m_saved.push(m_stream);
   m_stream = new PerlModOutputStream();
 }
 
 void PerlModOutput::icloseSave(QCString &s)
 {
+;;printf("%s %s\n",__PRETTY_FUNCTION__,qPrint(s));
   s = m_stream->m_s;
   delete m_stream;
   m_stream = m_saved.pop();
@@ -211,6 +214,7 @@ void PerlModOutput::icloseSave(QCString &s)
 
 void PerlModOutput::incIndent()
 {
+;;printf("%s\n",__PRETTY_FUNCTION__);
   if (m_indentation < PERLOUTPUT_MAX_INDENTATION)
   {
     char *s = &m_spaces[m_indentation * 2];
@@ -221,6 +225,7 @@ void PerlModOutput::incIndent()
 
 void PerlModOutput::decIndent()
 {
+;;printf("%s\n",__PRETTY_FUNCTION__);
   m_indentation--;
   if (m_indentation < PERLOUTPUT_MAX_INDENTATION)
     m_spaces[m_indentation * 2] = 0;
@@ -228,6 +233,7 @@ void PerlModOutput::decIndent()
 
 void PerlModOutput::iaddQuoted(const char *s) 
 {
+;;printf("%s %s\n",__PRETTY_FUNCTION__,s);
   char c;
   while ((c = *s++) != 0) {
     if ((c == '\'') || (c == '\\'))
@@ -238,6 +244,7 @@ void PerlModOutput::iaddQuoted(const char *s)
   
 void PerlModOutput::iaddField(const char *s)
 {
+;;printf("%s %s\n",__PRETTY_FUNCTION__,s);
   continueBlock();
   m_stream->add(s);
   m_stream->add(m_pretty ? " => " : "=>");
@@ -245,6 +252,7 @@ void PerlModOutput::iaddField(const char *s)
 
 void PerlModOutput::iaddFieldQuotedChar(const char *field, char content)
 {
+;;printf("%s %s\n",__PRETTY_FUNCTION__,field);
   iaddField(field);
   m_stream->add('\'');
   if ((content == '\'') || (content == '\\'))
@@ -257,6 +265,7 @@ void PerlModOutput::iaddFieldQuotedString(const char *field, const char *content
 {
   if (content == 0)
     return;
+;;printf("%s [%s] [%s]\n",__PRETTY_FUNCTION__,field,content);
   iaddField(field);
   m_stream->add('\'');
   iaddQuoted(content);
@@ -265,6 +274,7 @@ void PerlModOutput::iaddFieldQuotedString(const char *field, const char *content
 
 void PerlModOutput::iopen(char c, const char *s)
 {
+;;printf("%s [%c]\n",__PRETTY_FUNCTION__,c);
   if (s != 0)
     iaddField(s);
   else
@@ -276,6 +286,7 @@ void PerlModOutput::iopen(char c, const char *s)
 
 void PerlModOutput::iclose(char c)
 {
+;;printf("%s [%c]\n",__PRETTY_FUNCTION__,c);
   decIndent(); 
   indent();
   if (c != 0)
@@ -432,11 +443,13 @@ private:
 PerlModDocVisitor::PerlModDocVisitor(PerlModOutput &output)
   : DocVisitor(DocVisitor_Other), m_output(output), m_textmode(false), m_textblockstart(FALSE)
 {
+;;printf("%s\n",__PRETTY_FUNCTION__);
   m_output.openList("doc");
 }
 
 void PerlModDocVisitor::finish()
 {
+;;printf("%s\n",__PRETTY_FUNCTION__);
   leaveText();
   m_output.closeList()
     .add(m_other);
@@ -444,6 +457,7 @@ void PerlModDocVisitor::finish()
 
 void PerlModDocVisitor::addLink(const QCString &,const QCString &file,const QCString &anchor)
 {
+;;printf("%s [%s] [%s]\n",__PRETTY_FUNCTION__,qPrint(file),qPrint(anchor));
   QCString link = file;
   if (!anchor.isEmpty())
     (link += "_1") += anchor;
@@ -452,18 +466,21 @@ void PerlModDocVisitor::addLink(const QCString &,const QCString &file,const QCSt
 
 void PerlModDocVisitor::openItem(const char *name)
 {
+;;printf("%s [%s]\n",__PRETTY_FUNCTION__,name);
   leaveText();
   m_output.openHash().addFieldQuotedString("type", name);
 }
 
 void PerlModDocVisitor::closeItem()
 {
+;;printf("%s\n",__PRETTY_FUNCTION__);
   leaveText();
   m_output.closeHash();
 }
 
 void PerlModDocVisitor::enterText()
 {
+;;printf("%s\n",__PRETTY_FUNCTION__);
   if (m_textmode)
     return;
   openItem("text");
@@ -473,6 +490,7 @@ void PerlModDocVisitor::enterText()
 
 void PerlModDocVisitor::leaveText()
 {
+;;printf("%s\n",__PRETTY_FUNCTION__);
   if (!m_textmode)
     return;
   m_textmode = false;
@@ -483,12 +501,14 @@ void PerlModDocVisitor::leaveText()
 
 void PerlModDocVisitor::singleItem(const char *name)
 {
+;;printf("%s [%s]\n",__PRETTY_FUNCTION__,name);
   openItem(name);
   closeItem();
 }
 
 void PerlModDocVisitor::openSubBlock(const char *s)
 {
+;;printf("%s [%s]\n",__PRETTY_FUNCTION__,s?s:"");
   leaveText();
   m_output.openList(s);
   m_textblockstart = true;
@@ -496,12 +516,14 @@ void PerlModDocVisitor::openSubBlock(const char *s)
 
 void PerlModDocVisitor::closeSubBlock()
 {
+;;printf("%s\n",__PRETTY_FUNCTION__);
   leaveText();
   m_output.closeList();
 }
 
 void PerlModDocVisitor::openOther()
 {
+;;printf("%s but nothing\n",__PRETTY_FUNCTION__);
   // Using a secondary text stream will corrupt the perl file. Instead of
   // printing doc => [ data => [] ], it will print doc => [] data => [].
   /*
@@ -512,6 +534,7 @@ void PerlModDocVisitor::openOther()
 
 void PerlModDocVisitor::closeOther()
 {
+;;printf("%s but nothing\n",__PRETTY_FUNCTION__);
   // Using a secondary text stream will corrupt the perl file. Instead of
   // printing doc => [ data => [] ], it will print doc => [] data => [].
   /*
@@ -524,12 +547,14 @@ void PerlModDocVisitor::closeOther()
 
 void PerlModDocVisitor::visit(DocWord *w)
 {
+;;printf("%s DocWord [%s]\n",__PRETTY_FUNCTION__,qPrint(w->word()));
   enterText();
   m_output.addQuoted(w->word());
 }
 
 void PerlModDocVisitor::visit(DocLinkedWord *w)
 {
+;;printf("%s DocLinkedWord [%s]\n",__PRETTY_FUNCTION__,qPrint(w->anchor()));
   openItem("url");
   addLink(w->ref(), w->file(), w->anchor());
   m_output.addFieldQuotedString("content", w->word());
@@ -538,16 +563,19 @@ void PerlModDocVisitor::visit(DocLinkedWord *w)
 
 void PerlModDocVisitor::visit(DocWhiteSpace *)
 {
+;;printf("%s DocWhiteSpace\n",__PRETTY_FUNCTION__);
   enterText();
   m_output.add(' ');
 }
 
 void PerlModDocVisitor::visit(DocSymbol *sy)
 {
+;;printf("%s DocSymbol\n",__PRETTY_FUNCTION__);
   const DocSymbol::PerlSymb *res = HtmlEntityMapper::instance()->perl(sy->symbol());
   const char *accent=0;
   if (res-> symb)
   {
+;;printf("%s DocSymbol [%s]\n",__PRETTY_FUNCTION__,res->symb);
     switch (res->type)
     {
       case DocSymbol::Perl_string:
@@ -613,6 +641,7 @@ void PerlModDocVisitor::visit(DocSymbol *sy)
 }
 void PerlModDocVisitor::visit(DocEmoji *sy)
 {
+;;printf("%s DocEmoji\n",__PRETTY_FUNCTION__);
   enterText();
   const char *name = EmojiEntityMapper::instance()->name(sy->index());
   if (name)
@@ -627,6 +656,7 @@ void PerlModDocVisitor::visit(DocEmoji *sy)
 
 void PerlModDocVisitor::visit(DocURL *u)
 {
+;;printf("%s DocURL\n",__PRETTY_FUNCTION__);
   openItem("url");
   m_output.addFieldQuotedString("content", u->url());
   closeItem();
@@ -654,6 +684,7 @@ void PerlModDocVisitor::visit(DocStyleChange *s)
     case DocStyleChange::Span:          style = "span"; break;
                                         
   }
+;;printf("%s DocStyleChange [%s]\n",__PRETTY_FUNCTION__,style?style:"");
   openItem("style");
   m_output.addFieldQuotedString("style", style)
     .addFieldBoolean("enable", s->enable());
@@ -683,6 +714,7 @@ void PerlModDocVisitor::visit(DocVerbatim *s)
     case DocVerbatim::Msc:       type = "msc";          break;
     case DocVerbatim::PlantUML:  type = "plantuml";     break;
   }
+;;printf("%s DocVerbatim [%s]\n",__PRETTY_FUNCTION__,type?type:"");;
   openItem(type);
   if (s->hasCaption())
   {
@@ -699,6 +731,7 @@ void PerlModDocVisitor::visit(DocVerbatim *s)
 void PerlModDocVisitor::visit(DocAnchor *anc)
 {
   QCString anchor = anc->file() + "_1" + anc->anchor();
+;;printf("%s DocAnchor [%s]\n",__PRETTY_FUNCTION__,qPrint(anchor));;
   openItem("anchor");
   m_output.addFieldQuotedString("id", anchor);
   closeItem();
@@ -740,6 +773,7 @@ void PerlModDocVisitor::visit(DocInclude *inc)
         "Please create a bug report\n",__FILE__);
     break;
   }
+;;printf("%s DocInclude [%s]\n",__PRETTY_FUNCTION__,type?type:"");;
   openItem(type);
   m_output.addFieldQuotedString("content", inc->text());
   closeItem();
@@ -747,6 +781,7 @@ void PerlModDocVisitor::visit(DocInclude *inc)
 
 void PerlModDocVisitor::visit(DocIncOperator *)
 {
+;;printf("%s but nothing\n",__PRETTY_FUNCTION__);
 #if 0
   //printf("DocIncOperator: type=%d first=%d, last=%d text=`%s'\n",
   //    op->type(),op->isFirst(),op->isLast(),op->text().data());
@@ -771,6 +806,7 @@ void PerlModDocVisitor::visit(DocIncOperator *)
 
 void PerlModDocVisitor::visit(DocFormula *f)
 {
+;;printf("%s DocFormula [%s]\n",__PRETTY_FUNCTION__,qPrint(f->text()));
   openItem("formula");
   QCString id;
   id += f->id();
@@ -780,6 +816,7 @@ void PerlModDocVisitor::visit(DocFormula *f)
 
 void PerlModDocVisitor::visit(DocIndexEntry *)
 {
+;;printf("%s but nothing\n",__PRETTY_FUNCTION__);
 #if 0
   m_output.add("<indexentry>"
 	       "<primaryie>");
@@ -792,10 +829,12 @@ void PerlModDocVisitor::visit(DocIndexEntry *)
 
 void PerlModDocVisitor::visit(DocSimpleSectSep *)
 {
+;;printf("%s but nothing\n",__PRETTY_FUNCTION__);
 }
 
 void PerlModDocVisitor::visit(DocCite *cite)
 {
+;;printf("%s DocCite [%s]\n",__PRETTY_FUNCTION__,qPrint(cite->text()));
   openItem("cite");
   m_output.addFieldQuotedString("text", cite->text());
   closeItem();
@@ -808,6 +847,7 @@ void PerlModDocVisitor::visit(DocCite *cite)
 
 void PerlModDocVisitor::visitPre(DocAutoList *l)
 {
+;;printf("%s DocAutoList [%s]\n",__PRETTY_FUNCTION__, l->isEnumList() ? "ordered" : "itemized");
   openItem("list");
   m_output.addFieldQuotedString("style", l->isEnumList() ? "ordered" : "itemized");
   openSubBlock("content");
@@ -815,22 +855,26 @@ void PerlModDocVisitor::visitPre(DocAutoList *l)
 
 void PerlModDocVisitor::visitPost(DocAutoList *)
 {
+;;printf("%s DocAutoList\n",__PRETTY_FUNCTION__);
   closeSubBlock();
   closeItem();
 }
 
 void PerlModDocVisitor::visitPre(DocAutoListItem *)
 {
+;;printf("%s DocAutoListItem\n",__PRETTY_FUNCTION__);
   openSubBlock();
 }
 
 void PerlModDocVisitor::visitPost(DocAutoListItem *)
 {
+;;printf("%s DocAutoListItem\n",__PRETTY_FUNCTION__);
   closeSubBlock();
 }
 
 void PerlModDocVisitor::visitPre(DocPara *)
 {
+;;printf("%s DocPara\n",__PRETTY_FUNCTION__);
   if (m_textblockstart)
     m_textblockstart = false;
   else
@@ -843,6 +887,7 @@ void PerlModDocVisitor::visitPre(DocPara *)
 
 void PerlModDocVisitor::visitPost(DocPara *)
 {
+;;printf("%s DocPara\n",__PRETTY_FUNCTION__);
   /*
   closeSubBlock();
   closeItem();
@@ -851,10 +896,12 @@ void PerlModDocVisitor::visitPost(DocPara *)
 
 void PerlModDocVisitor::visitPre(DocRoot *)
 {
+;;printf("%s DocRoot\n",__PRETTY_FUNCTION__);
 }
 
 void PerlModDocVisitor::visitPost(DocRoot *)
 {
+;;printf("%s DocRoot\n",__PRETTY_FUNCTION__);
 }
 
 void PerlModDocVisitor::visitPre(DocSimpleSect *s)
@@ -883,6 +930,7 @@ void PerlModDocVisitor::visitPre(DocSimpleSect *s)
     err("unknown simple section found\n");
     break;
   }
+;;printf("%s DocSimpleSect [%s]\n",__PRETTY_FUNCTION__,type?type:"");;
   leaveText();
   m_output.openHash();
   openOther();
@@ -891,6 +939,7 @@ void PerlModDocVisitor::visitPre(DocSimpleSect *s)
 
 void PerlModDocVisitor::visitPost(DocSimpleSect *)
 {
+;;printf("%s DocSimpleSect\n",__PRETTY_FUNCTION__);
   closeSubBlock();
   closeOther();
   m_output.closeHash();
@@ -898,18 +947,21 @@ void PerlModDocVisitor::visitPost(DocSimpleSect *)
 
 void PerlModDocVisitor::visitPre(DocTitle *)
 {
+;;printf("%s DocTitle\n",__PRETTY_FUNCTION__);
   openItem("title");
   openSubBlock("content");
 }
 
 void PerlModDocVisitor::visitPost(DocTitle *)
 {
+;;printf("%s DocTitle\n",__PRETTY_FUNCTION__);
   closeSubBlock();
   closeItem();
 }
 
 void PerlModDocVisitor::visitPre(DocSimpleList *) 
 {
+;;printf("%s DocSimpleList\n",__PRETTY_FUNCTION__);
   openItem("list");
   m_output.addFieldQuotedString("style", "itemized");
   openSubBlock("content");
@@ -917,15 +969,24 @@ void PerlModDocVisitor::visitPre(DocSimpleList *)
 
 void PerlModDocVisitor::visitPost(DocSimpleList *)
 {
+;;printf("%s DocSimpleList\n",__PRETTY_FUNCTION__);
+  openItem("list");
   closeSubBlock();
   closeItem();
 }
 
-void PerlModDocVisitor::visitPre(DocSimpleListItem *) { openSubBlock(); }
-void PerlModDocVisitor::visitPost(DocSimpleListItem *) { closeSubBlock(); }
+void PerlModDocVisitor::visitPre(DocSimpleListItem *) { 
+;;printf("%s DocSimpleListItem\n",__PRETTY_FUNCTION__);
+    openSubBlock(); 
+}
+void PerlModDocVisitor::visitPost(DocSimpleListItem *) { 
+;;printf("%s DocSimpleListItem\n",__PRETTY_FUNCTION__);
+    closeSubBlock(); 
+}
 
 void PerlModDocVisitor::visitPre(DocSection *s)
 {
+;;printf("%s DocSection\n",__PRETTY_FUNCTION__);
   QCString sect = QCString().sprintf("sect%d",s->level());
   openItem(sect);
   m_output.addFieldQuotedString("title", s->title());
@@ -934,12 +995,14 @@ void PerlModDocVisitor::visitPre(DocSection *s)
 
 void PerlModDocVisitor::visitPost(DocSection *)
 {
+;;printf("%s DocSection\n",__PRETTY_FUNCTION__);
   closeSubBlock();
   closeItem();
 }
 
 void PerlModDocVisitor::visitPre(DocHtmlList *l)
 {
+;;printf("%s DocHtmlList\n",__PRETTY_FUNCTION__);
   openItem("list");
   m_output.addFieldQuotedString("style", (l->type() == DocHtmlList::Ordered) ? "ordered" : "itemized");
   openSubBlock("content");
@@ -947,12 +1010,17 @@ void PerlModDocVisitor::visitPre(DocHtmlList *l)
 
 void PerlModDocVisitor::visitPost(DocHtmlList *)
 {
+;;printf("%s DocHtmlList\n",__PRETTY_FUNCTION__);
   closeSubBlock();
   closeItem();
 }
 
-void PerlModDocVisitor::visitPre(DocHtmlListItem *) { openSubBlock(); }
-void PerlModDocVisitor::visitPost(DocHtmlListItem *) { closeSubBlock(); }
+void PerlModDocVisitor::visitPre(DocHtmlListItem *) { 
+;;printf("%s DocHtmlListItem\n",__PRETTY_FUNCTION__);
+    openSubBlock(); }
+void PerlModDocVisitor::visitPost(DocHtmlListItem *) { 
+;;printf("%s DocHtmlListItem\n",__PRETTY_FUNCTION__);
+    closeSubBlock(); }
 
 //void PerlModDocVisitor::visitPre(DocHtmlPre *)
 //{
@@ -970,6 +1038,7 @@ void PerlModDocVisitor::visitPost(DocHtmlListItem *) { closeSubBlock(); }
 
 void PerlModDocVisitor::visitPre(DocHtmlDescList *)
 {
+;;printf("%s DocHtmlDescList\n",__PRETTY_FUNCTION__);
 #if 0
   m_output.add("<variablelist>\n");
 #endif
@@ -977,6 +1046,7 @@ void PerlModDocVisitor::visitPre(DocHtmlDescList *)
 
 void PerlModDocVisitor::visitPost(DocHtmlDescList *)
 {
+;;printf("%s DocHtmlDescList\n",__PRETTY_FUNCTION__);
 #if 0
   m_output.add("</variablelist>\n");
 #endif
@@ -984,6 +1054,7 @@ void PerlModDocVisitor::visitPost(DocHtmlDescList *)
 
 void PerlModDocVisitor::visitPre(DocHtmlDescTitle *)
 {
+;;printf("%s DocHtmlDescTitle\n",__PRETTY_FUNCTION__);
 #if 0
   m_output.add("<varlistentry><term>");
 #endif
@@ -991,6 +1062,7 @@ void PerlModDocVisitor::visitPre(DocHtmlDescTitle *)
 
 void PerlModDocVisitor::visitPost(DocHtmlDescTitle *)
 {
+;;printf("%s DocHtmlDescTitle\n",__PRETTY_FUNCTION__);
 #if 0
   m_output.add("</term></varlistentry>\n");
 #endif
@@ -998,6 +1070,7 @@ void PerlModDocVisitor::visitPost(DocHtmlDescTitle *)
 
 void PerlModDocVisitor::visitPre(DocHtmlDescData *)
 {
+;;printf("%s DocHtmlDescData\n",__PRETTY_FUNCTION__);
 #if 0
   m_output.add("<listitem>");
 #endif
@@ -1005,6 +1078,7 @@ void PerlModDocVisitor::visitPre(DocHtmlDescData *)
 
 void PerlModDocVisitor::visitPost(DocHtmlDescData *)
 {
+;;printf("%s DocHtmlDescData\n",__PRETTY_FUNCTION__);
 #if 0
   m_output.add("</listitem>\n");
 #endif
@@ -1012,6 +1086,7 @@ void PerlModDocVisitor::visitPost(DocHtmlDescData *)
 
 void PerlModDocVisitor::visitPre(DocHtmlTable *)
 {
+;;printf("%s DocHtmlTable\n",__PRETTY_FUNCTION__);
 #if 0
   m_output.add("<table rows=\""); m_output.add(t->numRows());
   m_output.add("\" cols=\""); m_output.add(t->numCols()); m_output.add("\">");
@@ -1020,6 +1095,7 @@ void PerlModDocVisitor::visitPre(DocHtmlTable *)
 
 void PerlModDocVisitor::visitPost(DocHtmlTable *)
 {
+;;printf("%s DocHtmlTable\n",__PRETTY_FUNCTION__);
 #if 0
   m_output.add("</table>\n");
 #endif
@@ -1027,6 +1103,7 @@ void PerlModDocVisitor::visitPost(DocHtmlTable *)
 
 void PerlModDocVisitor::visitPre(DocHtmlRow *)
 {
+;;printf("%s DocHtmlRow\n",__PRETTY_FUNCTION__);
 #if 0
   m_output.add("<row>\n");
 #endif
@@ -1034,6 +1111,7 @@ void PerlModDocVisitor::visitPre(DocHtmlRow *)
 
 void PerlModDocVisitor::visitPost(DocHtmlRow *)
 {
+;;printf("%s DocHtmlRow\n",__PRETTY_FUNCTION__);
 #if 0
   m_output.add("</row>\n");
 #endif
@@ -1041,6 +1119,7 @@ void PerlModDocVisitor::visitPost(DocHtmlRow *)
 
 void PerlModDocVisitor::visitPre(DocHtmlCell *)
 {
+;;printf("%s DocHtmlCell\n",__PRETTY_FUNCTION__);
 #if 0
   if (c->isHeading()) m_output.add("<entry thead=\"yes\">"); else m_output.add("<entry thead=\"no\">");
 #endif
@@ -1048,6 +1127,7 @@ void PerlModDocVisitor::visitPre(DocHtmlCell *)
 
 void PerlModDocVisitor::visitPost(DocHtmlCell *)
 {
+;;printf("%s DocHtmlCell\n",__PRETTY_FUNCTION__);
 #if 0
   m_output.add("</entry>");
 #endif
@@ -1055,6 +1135,7 @@ void PerlModDocVisitor::visitPost(DocHtmlCell *)
 
 void PerlModDocVisitor::visitPre(DocHtmlCaption *)
 {
+;;printf("%s DocHtmlCaption\n",__PRETTY_FUNCTION__);
 #if 0
   m_output.add("<caption>");
 #endif
@@ -1062,6 +1143,7 @@ void PerlModDocVisitor::visitPre(DocHtmlCaption *)
 
 void PerlModDocVisitor::visitPost(DocHtmlCaption *)
 {
+;;printf("%s DocHtmlCaption\n",__PRETTY_FUNCTION__);
 #if 0
   m_output.add("</caption>\n");
 #endif
@@ -1069,6 +1151,7 @@ void PerlModDocVisitor::visitPost(DocHtmlCaption *)
 
 void PerlModDocVisitor::visitPre(DocInternal *)
 {
+;;printf("%s DocInternal\n",__PRETTY_FUNCTION__);
 #if 0
   m_output.add("<internal>");
 #endif
@@ -1076,6 +1159,7 @@ void PerlModDocVisitor::visitPre(DocInternal *)
 
 void PerlModDocVisitor::visitPost(DocInternal *)
 {
+;;printf("%s DocInternal\n",__PRETTY_FUNCTION__);
 #if 0
   m_output.add("</internal>");
 #endif
@@ -1083,6 +1167,7 @@ void PerlModDocVisitor::visitPost(DocInternal *)
 
 void PerlModDocVisitor::visitPre(DocHRef *)
 {
+;;printf("%s DocHRef\n",__PRETTY_FUNCTION__);
 #if 0
   m_output.add("<ulink url=\""); m_output.add(href->url()); m_output.add("\">");
 #endif
@@ -1090,6 +1175,7 @@ void PerlModDocVisitor::visitPre(DocHRef *)
 
 void PerlModDocVisitor::visitPost(DocHRef *)
 {
+;;printf("%s DocHRef\n",__PRETTY_FUNCTION__);
 #if 0
   m_output.add("</ulink>");
 #endif
@@ -1097,6 +1183,7 @@ void PerlModDocVisitor::visitPost(DocHRef *)
 
 void PerlModDocVisitor::visitPre(DocHtmlHeader *)
 {
+;;printf("%s DocHtmlHeader\n",__PRETTY_FUNCTION__);
 #if 0
   m_output.add("<sect"); m_output.add(header->level()); m_output.add(">");
 #endif
@@ -1104,6 +1191,7 @@ void PerlModDocVisitor::visitPre(DocHtmlHeader *)
 
 void PerlModDocVisitor::visitPost(DocHtmlHeader *)
 {
+;;printf("%s DocHtmlHeader\n",__PRETTY_FUNCTION__);
 #if 0
   m_output.add("</sect"); m_output.add(header->level()); m_output.add(">\n");
 #endif
@@ -1111,6 +1199,7 @@ void PerlModDocVisitor::visitPost(DocHtmlHeader *)
 
 void PerlModDocVisitor::visitPre(DocImage *)
 {
+;;printf("%s DocImage\n",__PRETTY_FUNCTION__);
 #if 0
   m_output.add("<image type=\"");
   switch(img->type())
@@ -1146,6 +1235,7 @@ void PerlModDocVisitor::visitPre(DocImage *)
 
 void PerlModDocVisitor::visitPost(DocImage *)
 {
+;;printf("%s DocImage\n",__PRETTY_FUNCTION__);
 #if 0
   m_output.add("</image>");
 #endif
@@ -1153,6 +1243,7 @@ void PerlModDocVisitor::visitPost(DocImage *)
 
 void PerlModDocVisitor::visitPre(DocDotFile *)
 {
+;;printf("%s DocDotFile\n",__PRETTY_FUNCTION__);
 #if 0
   m_output.add("<dotfile name=\""); m_output.add(df->file()); m_output.add("\">");
 #endif
@@ -1160,12 +1251,14 @@ void PerlModDocVisitor::visitPre(DocDotFile *)
 
 void PerlModDocVisitor::visitPost(DocDotFile *)
 {
+;;printf("%s DocDotFile\n",__PRETTY_FUNCTION__);
 #if 0
   m_output.add("</dotfile>");
 #endif
 }
 void PerlModDocVisitor::visitPre(DocMscFile *)
 {
+;;printf("%s DocMscFile\n",__PRETTY_FUNCTION__);
 #if 0
   m_output.add("<mscfile name=\""); m_output.add(df->file()); m_output.add("\">");
 #endif
@@ -1173,6 +1266,7 @@ void PerlModDocVisitor::visitPre(DocMscFile *)
 
 void PerlModDocVisitor::visitPost(DocMscFile *)
 {
+;;printf("%s DocMscFile\n",__PRETTY_FUNCTION__);
 #if 0
   m_output.add("<mscfile>");
 #endif
@@ -1180,6 +1274,7 @@ void PerlModDocVisitor::visitPost(DocMscFile *)
 
 void PerlModDocVisitor::visitPre(DocDiaFile *)
 {
+;;printf("%s DocDiaFile\n",__PRETTY_FUNCTION__);
 #if 0
   m_output.add("<diafile name=\""); m_output.add(df->file()); m_output.add("\">");
 #endif
@@ -1187,6 +1282,7 @@ void PerlModDocVisitor::visitPre(DocDiaFile *)
 
 void PerlModDocVisitor::visitPost(DocDiaFile *)
 {
+;;printf("%s DocDiaFile\n",__PRETTY_FUNCTION__);
 #if 0
   m_output.add("</diafile>");
 #endif
@@ -1195,17 +1291,20 @@ void PerlModDocVisitor::visitPost(DocDiaFile *)
 
 void PerlModDocVisitor::visitPre(DocLink *lnk)
 {
+;;printf("%s DocLink [%s]\n",__PRETTY_FUNCTION__,qPrint(lnk->anchor()));
   openItem("link");
   addLink(lnk->ref(), lnk->file(), lnk->anchor());
 }
 
 void PerlModDocVisitor::visitPost(DocLink *)
 {
+;;printf("%s DocLink\n",__PRETTY_FUNCTION__);
   closeItem();
 }
 
 void PerlModDocVisitor::visitPre(DocRef *ref)
 {
+;;printf("%s DocRef\n",__PRETTY_FUNCTION__);
   openItem("ref");
   if (!ref->hasLinkText())
     m_output.addFieldQuotedString("text", ref->targetTitle());
@@ -1214,12 +1313,14 @@ void PerlModDocVisitor::visitPre(DocRef *ref)
 
 void PerlModDocVisitor::visitPost(DocRef *)
 {
+;;printf("%s DocRef\n",__PRETTY_FUNCTION__);
   closeSubBlock();
   closeItem();
 }
 
 void PerlModDocVisitor::visitPre(DocSecRefItem *)
 {
+;;printf("%s DocSecRefItem\n",__PRETTY_FUNCTION__);
 #if 0
   m_output.add("<tocitem id=\""); m_output.add(ref->file()); m_output.add("_1"); m_output.add(ref->anchor()); m_output.add("\">");
 #endif
@@ -1227,6 +1328,7 @@ void PerlModDocVisitor::visitPre(DocSecRefItem *)
 
 void PerlModDocVisitor::visitPost(DocSecRefItem *)
 {
+;;printf("%s DocSecRefItem\n",__PRETTY_FUNCTION__);
 #if 0
   m_output.add("</tocitem>");
 #endif
@@ -1234,6 +1336,7 @@ void PerlModDocVisitor::visitPost(DocSecRefItem *)
 
 void PerlModDocVisitor::visitPre(DocSecRefList *)
 {
+;;printf("%s DocSecRefList\n",__PRETTY_FUNCTION__);
 #if 0
   m_output.add("<toclist>");
 #endif
@@ -1241,6 +1344,7 @@ void PerlModDocVisitor::visitPre(DocSecRefList *)
 
 void PerlModDocVisitor::visitPost(DocSecRefList *)
 {
+;;printf("%s DocSecRefList\n",__PRETTY_FUNCTION__);
 #if 0
   m_output.add("</toclist>");
 #endif
@@ -1271,6 +1375,7 @@ void PerlModDocVisitor::visitPre(DocParamSect *s)
     err("unknown parameter section found\n");
     break;
   }
+;;printf("%s DocParamSect [%s]\n",__PRETTY_FUNCTION__,type?type:"");
   m_output.openHash();
   openOther();
   openSubBlock(type);
@@ -1278,6 +1383,7 @@ void PerlModDocVisitor::visitPre(DocParamSect *s)
 
 void PerlModDocVisitor::visitPost(DocParamSect *)
 {
+;;printf("%s DocParamSect\n",__PRETTY_FUNCTION__);
   closeSubBlock();
   closeOther();
   m_output.closeHash();
@@ -1285,6 +1391,7 @@ void PerlModDocVisitor::visitPost(DocParamSect *)
 
 void PerlModDocVisitor::visitPre(DocParamList *pl)
 {
+;;printf("%s DocParamList\n",__PRETTY_FUNCTION__);
   leaveText();
   m_output.openHash()
     .openList("parameters");
@@ -1303,6 +1410,7 @@ void PerlModDocVisitor::visitPre(DocParamList *pl)
     {
       name = ((DocLinkedWord*)param)->word();
     }
+;;printf("%s DocParamList [%s]\n",__PRETTY_FUNCTION__,qPrint(name));
 
     QCString dir = "";
     DocParamSect *sect = 0;
@@ -1339,6 +1447,7 @@ void PerlModDocVisitor::visitPre(DocParamList *pl)
 
 void PerlModDocVisitor::visitPost(DocParamList *)
 {
+;;printf("%s DocParamList\n",__PRETTY_FUNCTION__);
   leaveText();
   m_output.closeList()
     .closeHash();
@@ -1346,6 +1455,7 @@ void PerlModDocVisitor::visitPost(DocParamList *)
 
 void PerlModDocVisitor::visitPre(DocXRefItem *x)
 {
+;;printf("%s DocXRefItem [%s]\n",__PRETTY_FUNCTION__,qPrint(x->title()));
 #if 0
   m_output.add("<xrefsect id=\"");
   m_output.add(x->file()); m_output.add("_1"); m_output.add(x->anchor());
@@ -1362,6 +1472,7 @@ void PerlModDocVisitor::visitPre(DocXRefItem *x)
 
 void PerlModDocVisitor::visitPost(DocXRefItem *x)
 {
+;;printf("%s DocXRefItem [%s]\n",__PRETTY_FUNCTION__,qPrint(x->title()));
   if (x->title().isEmpty()) return;
   closeSubBlock();
   closeItem();
@@ -1373,6 +1484,7 @@ void PerlModDocVisitor::visitPost(DocXRefItem *x)
 
 void PerlModDocVisitor::visitPre(DocInternalRef *ref)
 {
+;;printf("%s DocInternalRef\n",__PRETTY_FUNCTION__);
   openItem("ref");
   addLink(0,ref->file(),ref->anchor());
   openSubBlock("content");
@@ -1380,34 +1492,41 @@ void PerlModDocVisitor::visitPre(DocInternalRef *ref)
 
 void PerlModDocVisitor::visitPost(DocInternalRef *)
 {
+;;printf("%s DocInternalRef\n",__PRETTY_FUNCTION__);
   closeSubBlock();
   closeItem();
 }
 
 void PerlModDocVisitor::visitPre(DocCopy *)
 {
+;;printf("%s DocCopy\n",__PRETTY_FUNCTION__);
 }
 
 void PerlModDocVisitor::visitPost(DocCopy *)
 {
+;;printf("%s DocCopy\n",__PRETTY_FUNCTION__);
 }
 
 void PerlModDocVisitor::visitPre(DocText *)
 {
+;;printf("%s DocText\n",__PRETTY_FUNCTION__);
 }
 
 void PerlModDocVisitor::visitPost(DocText *)
 {
+;;printf("%s DocText\n",__PRETTY_FUNCTION__);
 }
 
 void PerlModDocVisitor::visitPre(DocHtmlBlockQuote *)
 {
+;;printf("%s DocHtmlBlockQuote\n",__PRETTY_FUNCTION__);
   openItem("blockquote");
   openSubBlock("content");
 }
 
 void PerlModDocVisitor::visitPost(DocHtmlBlockQuote *)
 {
+;;printf("%s DocHtmlBlockQuote\n",__PRETTY_FUNCTION__);
   closeSubBlock();
   closeItem();
 }
@@ -1422,15 +1541,18 @@ void PerlModDocVisitor::visitPost(DocVhdlFlow *)
 
 void PerlModDocVisitor::visitPre(DocParBlock *)
 {
+;;printf("%s DocParBlock\n",__PRETTY_FUNCTION__);
 }
 
 void PerlModDocVisitor::visitPost(DocParBlock *)
 {
+;;printf("%s DocParBlock\n",__PRETTY_FUNCTION__);
 }
 
 
 static void addTemplateArgumentList(ArgumentList *al,PerlModOutput &output,const char *)
 {
+;;printf("%s TemplateList\n",__PRETTY_FUNCTION__);
   if (!al)
     return;
   output.openList("template_parameters");
@@ -1438,6 +1560,7 @@ static void addTemplateArgumentList(ArgumentList *al,PerlModOutput &output,const
   Argument *a;
   for (ali.toFirst();(a=ali.current());++ali)
   {
+;;printf("%s name[%s]\n",__PRETTY_FUNCTION__,qPrint(a->name));
     output.openHash();
     if (!a->type.isEmpty())
       output.addFieldQuotedString("type", a->type);
@@ -1463,6 +1586,7 @@ static void addMemberTemplateLists(MemberDef *md,PerlModOutput &output)
 
 static void addTemplateList(ClassDef *cd,PerlModOutput &output)
 {
+;;printf("%s TemplateList\n",__PRETTY_FUNCTION__);
   addTemplateArgumentList(cd->templateArguments(),output,cd->name());
 }
 
@@ -1474,6 +1598,7 @@ static void addPerlModDocBlock(PerlModOutput &output,
 			    MemberDef *md,
 			    const QCString &text)
 {
+;;printf("%s name=%s\n",__PRETTY_FUNCTION__,name);
   QCString stext = text.stripWhiteSpace();
   if (stext.isEmpty())
     output.addField(name).add("{}");
@@ -1602,6 +1727,7 @@ void PerlModGenerator::generatePerlModForMember(MemberDef *md,Definition *)
     case MemberType_Sequence:    memType="sequence";   break;
     case MemberType_Dictionary:  memType="dictionary"; break;
   }
+;;printf("%s memType[%s]\n",__PRETTY_FUNCTION__,qPrint(memType));
 
   m_output.openHash()
     .addFieldQuotedString("kind", memType)
@@ -1734,6 +1860,7 @@ void PerlModGenerator::generatePerlModForMember(MemberDef *md,Definition *)
 void PerlModGenerator::generatePerlModSection(Definition *d,
 					      MemberList *ml,const char *name,const char *header)
 {
+;;printf("%s member name[%s] header[%s]\n",__PRETTY_FUNCTION__,name,header?header:"");
   if (ml==0) return; // empty list
 
   m_output.openHash(name);
@@ -1754,6 +1881,7 @@ void PerlModGenerator::generatePerlModSection(Definition *d,
 
 void PerlModGenerator::addListOfAllMembers(ClassDef *cd)
 {
+;;printf("%s\n",__PRETTY_FUNCTION__);
   m_output.openList("all_members");
   if (cd->memberNameInfoSDict())
   {
@@ -1804,6 +1932,7 @@ void PerlModGenerator::generatePerlModForClass(ClassDef *cd)
   // + detailed member documentation
   // - examples using the class
   
+;;printf("%s\n",__PRETTY_FUNCTION__);
   if (cd->isReference())        return; // skip external references.
   if (cd->name().find('@')!=-1) return; // skip anonymous compounds.
   if (cd->templateMaster()!=0)  return; // skip generated template instances.
@@ -1813,6 +1942,7 @@ void PerlModGenerator::generatePerlModForClass(ClassDef *cd)
   
   if (cd->baseClasses())
   {
+;;printf("%s base class\n",__PRETTY_FUNCTION__);
     m_output.openList("base");
     BaseClassListIterator bcli(*cd->baseClasses());
     BaseClassDef *bcd;
@@ -1827,6 +1957,7 @@ void PerlModGenerator::generatePerlModForClass(ClassDef *cd)
 
   if (cd->subClasses())
   {
+;;printf("%s derived class\n",__PRETTY_FUNCTION__);
     m_output.openList("derived");
     BaseClassListIterator bcli(*cd->subClasses());
     BaseClassDef *bcd;
@@ -1842,6 +1973,7 @@ void PerlModGenerator::generatePerlModForClass(ClassDef *cd)
   ClassSDict *cl = cd->getClassSDict();
   if (cl)
   {
+;;printf("%s classSDict\n",__PRETTY_FUNCTION__);
     m_output.openList("inner");
     ClassSDict::Iterator cli(*cl);
     ClassDef *cd;
@@ -1855,6 +1987,7 @@ void PerlModGenerator::generatePerlModForClass(ClassDef *cd)
   IncludeInfo *ii=cd->includeInfo();
   if (ii)
   {
+;;printf("%s include\n",__PRETTY_FUNCTION__);
     QCString nm = ii->includeName;
     if (nm.isEmpty() && ii->fileDef) nm = ii->fileDef->docName();
     if (!nm.isEmpty())
@@ -1874,6 +2007,7 @@ void PerlModGenerator::generatePerlModForClass(ClassDef *cd)
   addListOfAllMembers(cd);
   if (cd->getMemberGroupSDict())
   {
+;;printf("%s member group user_defined\n",__PRETTY_FUNCTION__);
     MemberGroupSDict::Iterator mgli(*cd->getMemberGroupSDict());
     MemberGroup *mg;
     for (;(mg=mgli.current());++mgli)
@@ -1946,6 +2080,7 @@ void PerlModGenerator::generatePerlModForNamespace(NamespaceDef *nd)
   // + detailed desc
   // + location
   // - files containing (parts of) the namespace definition
+;;printf("%s\n",__PRETTY_FUNCTION__);
 
   if (nd->isReference()) return; // skip external references
 
@@ -2014,6 +2149,7 @@ void PerlModGenerator::generatePerlModForFile(FileDef *fd)
   // - source code
   // - location
   // - number of lines
+;;printf("%s\n",__PRETTY_FUNCTION__);
  
   if (fd->isReference()) return;
 
@@ -2081,6 +2217,7 @@ void PerlModGenerator::generatePerlModForGroup(GroupDef *gd)
   // - examples
   // + brief description
   // + detailed description
+;;printf("%s\n",__PRETTY_FUNCTION__);
 
   if (gd->isReference()) return; // skip external references
 
@@ -2180,6 +2317,8 @@ void PerlModGenerator::generatePerlModForPage(PageDef *pd)
   // + title
   // + documentation
 
+;;printf("%s\n",__PRETTY_FUNCTION__);
+
   if (pd->isReference()) return;
 
   m_output.openHash()
@@ -2195,6 +2334,7 @@ void PerlModGenerator::generatePerlModForPage(PageDef *pd)
 
 bool PerlModGenerator::generatePerlModOutput()
 {
+;;printf("%s\n",__PRETTY_FUNCTION__);
   QFile outputFile;
   if (!createOutputFile(outputFile, pathDoxyDocsPM))
     return false;

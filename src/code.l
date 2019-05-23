@@ -572,7 +572,7 @@ static void nextCodeLine()
  */
 static void codifyLines(const char *text)
 {
-  //printf("codifyLines(%d,\"%s\")\n",g_yyLineNr,text);
+  printf("%s code.l codifyLines(%d,\"%s\")\n",__PRETTY_FUNCTION__,g_yyLineNr,text);
   const char *p=text,*sp=p;
   char c;
   bool done=FALSE;

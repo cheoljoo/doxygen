@@ -115,6 +115,7 @@ inline void writeXMLString(FTextStream &t,const char *s)
 
 inline void writeXMLCodeString(FTextStream &t,const char *s, int &col)
 {
+printf("%s start [%s][col:%d]\n",__PRETTY_FUNCTION__,s,col);
   char c;
   while ((c=*s++))
   {
@@ -226,6 +227,7 @@ class TextGeneratorXMLImpl : public TextGeneratorIntf
 /** Generator for producing XML formatted source code. */
 void XMLCodeGenerator::codify(const char *text)
 {
+printf("%s start [%s]\n",__PRETTY_FUNCTION__,text);
   XML_DB(("(codify \"%s\")\n",text));
   if (m_insideCodeLine && !m_insideSpecialHL && m_normalHLNeedStartTag)
   {
@@ -233,11 +235,13 @@ void XMLCodeGenerator::codify(const char *text)
     m_normalHLNeedStartTag=FALSE;
   }
   writeXMLCodeString(m_t,text,m_col);
+printf("%s end [%s]\n",__PRETTY_FUNCTION__,text);
 }
 void XMLCodeGenerator::writeCodeLink(const char *ref,const char *file,
                    const char *anchor,const char *name,
                    const char *tooltip)
 {
+printf("%s start [name:%s]\n",__PRETTY_FUNCTION__,name);
   XML_DB(("(writeCodeLink)\n"));
   if (m_insideCodeLine && !m_insideSpecialHL && m_normalHLNeedStartTag)
   {
@@ -246,6 +250,7 @@ void XMLCodeGenerator::writeCodeLink(const char *ref,const char *file,
   }
   writeXMLLink(m_t,ref,file,anchor,name,tooltip);
   m_col+=qstrlen(name);
+printf("%s end [name:%s]\n",__PRETTY_FUNCTION__,name);
 }
 void XMLCodeGenerator::writeTooltip(const char *, const DocLinkInfo &, const char *,
                   const char *, const SourceLinkInfo &, const SourceLinkInfo &
@@ -255,6 +260,7 @@ void XMLCodeGenerator::writeTooltip(const char *, const DocLinkInfo &, const cha
 }
 void XMLCodeGenerator::startCodeLine(bool)
 {
+printf("%s start\n",__PRETTY_FUNCTION__);
   XML_DB(("(startCodeLine)\n"));
   m_t << "<codeline";
   if (m_lineNumber!=-1)
@@ -280,9 +286,11 @@ void XMLCodeGenerator::startCodeLine(bool)
   m_t << ">";
   m_insideCodeLine=TRUE;
   m_col=0;
+printf("%s end\n",__PRETTY_FUNCTION__);
 }
 void XMLCodeGenerator::endCodeLine()
 {
+printf("%s start\n",__PRETTY_FUNCTION__);
   XML_DB(("(endCodeLine)\n"));
   if (!m_insideSpecialHL && !m_normalHLNeedStartTag)
   {
@@ -294,9 +302,11 @@ void XMLCodeGenerator::endCodeLine()
   m_refId.resize(0);
   m_external.resize(0);
   m_insideCodeLine=FALSE;
+printf("%s end\n",__PRETTY_FUNCTION__);
 }
 void XMLCodeGenerator::startFontClass(const char *colorClass)
 {
+printf("%s start [color:%s]\n",__PRETTY_FUNCTION__,colorClass);
   XML_DB(("(startFontClass)\n"));
   if (m_insideCodeLine && !m_insideSpecialHL && !m_normalHLNeedStartTag)
   {
@@ -305,12 +315,15 @@ void XMLCodeGenerator::startFontClass(const char *colorClass)
   }
   m_t << "<highlight class=\"" << colorClass << "\">"; // non DocBook
   m_insideSpecialHL=TRUE;
+printf("%s end\n",__PRETTY_FUNCTION__);
 }
 void XMLCodeGenerator::endFontClass()
 {
+printf("%s start\n",__PRETTY_FUNCTION__);
   XML_DB(("(endFontClass)\n"));
   m_t << "</highlight>"; // non DocBook
   m_insideSpecialHL=FALSE;
+printf("%s end\n",__PRETTY_FUNCTION__);
 }
 void XMLCodeGenerator::writeCodeAnchor(const char *)
 {
@@ -319,6 +332,7 @@ void XMLCodeGenerator::writeCodeAnchor(const char *)
 void XMLCodeGenerator::writeLineNumber(const char *extRef,const char *compId,
                      const char *anchorId,int l)
 {
+printf("%s [l:%d] start\n",__PRETTY_FUNCTION__,l);
   XML_DB(("(writeLineNumber)\n"));
   // we remember the information provided here to use it
   // at the <codeline> start tag.
@@ -330,6 +344,7 @@ void XMLCodeGenerator::writeLineNumber(const char *extRef,const char *compId,
     m_isMemberRef = anchorId!=0;
     if (extRef) m_external=extRef;
   }
+printf("%s [l:%d] end\n",__PRETTY_FUNCTION__,l);
 }
 void XMLCodeGenerator::finish()
 {
@@ -402,6 +417,7 @@ static void writeXMLDocBlock(FTextStream &t,
                       MemberDef * md,
                       const QCString &text)
 {
+printf("%s [text:%s] start\n",__PRETTY_FUNCTION__,qPrint(text));
   QCString stext = text.stripWhiteSpace();
   if (stext.isEmpty()) return;
   // convert the documentation string into an abstract syntax tree
@@ -417,10 +433,12 @@ static void writeXMLDocBlock(FTextStream &t,
   delete xmlCodeGen;
   delete root;
   
+printf("%s end\n",__PRETTY_FUNCTION__);
 }
 
 void writeXMLCodeBlock(FTextStream &t,FileDef *fd)
 {
+printf("%s start\n",__PRETTY_FUNCTION__);
   ParserInterface *pIntf=Doxygen::parserManager->getParser(fd->getDefFileExtension());
   SrcLangExt langExt = getLanguageFromFileName(fd->getDefFileExtension());
   pIntf->resetCodeParserState();
@@ -440,6 +458,7 @@ void writeXMLCodeBlock(FTextStream &t,FileDef *fd)
                 );
   xmlGen->finish();
   delete xmlGen;
+printf("%s end\n",__PRETTY_FUNCTION__);
 }
 
 static void writeMemberReference(FTextStream &t,Definition *def,MemberDef *rmd,const char *tagName)
