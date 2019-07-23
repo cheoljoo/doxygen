@@ -2080,6 +2080,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
   					  g_code->codify(yytext);
 					}
 <Body,FuncCall>"{"			{ 
+                            printf("FuncCall14 \{ %s\n",yytext);
                                           g_theVarContext.pushScope();
 
                                           DBG_CTX((stderr,"** scope stack push INNERBLOCK\n"));
@@ -2100,6 +2101,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					  BEGIN( Body );
 					}
 <Body,FuncCall,MemberCall,MemberCall2>"}"  { 
+                            printf("FuncCall14 } %s\n",yytext);
                                           g_theVarContext.popScope();
   					  g_type.resize(0); 
 					  g_name.resize(0);
@@ -2202,7 +2204,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 <AlignAs>\n                             { g_yyLineNr++; 
                                           codifyLines(yytext);
                                         }
-<AlignAs>.                              { g_code->codify(yytext); }
+<AlignAs>.                              { printf("AlignAs %s\n",yytext);  g_code->codify(yytext); }
 <AlignAsEnd>"("                         { g_code->codify(yytext);
                                           g_bracketCount++; 
                                         }
@@ -2216,7 +2218,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 <AlignAsEnd>\n                          { g_yyLineNr++; 
                                           codifyLines(yytext); 
                                         }
-<AlignAsEnd>.                           { g_code->codify(yytext); }
+<AlignAsEnd>.                           { printf("AlignASEnd %s\n",yytext); g_code->codify(yytext); }
 <ClassName>{ID}("\\"{ID})*		{ // PHP namespace
                                           g_curClassName=substitute(yytext,"\\","::");
   					  g_scopeStack.push(CLASSBLOCK);
@@ -2425,10 +2427,11 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
                                         }
 <UsingName>\n				{ codifyLines(yytext); BEGIN(Body); }
 <UsingName>.				{ codifyLines(yytext); BEGIN(Body); }
-<Body,FuncCall>"$"?"this"("->"|".")	{ g_code->codify(yytext); // this-> for C++, this. for C#
+<Body,FuncCall>"$"?"this"("->"|".")	{ printf("FuncCall1 %s\n",yytext); g_code->codify(yytext); // this-> for C++, this. for C#
 					  g_prefixed_with_this_keyword = TRUE;
                                         }
 <Body>{KEYWORD}/([^a-z_A-Z0-9]) 	{
+    printf("KEYWORD/ a-z0-9 %s\n",yytext);
                                           if (g_insideJava && qstrcmp("internal",yytext) ==0) REJECT;
                                           if (skipLanguageSpecificKeyword(yytext)) REJECT;
   					  startFontClass("keyword");
@@ -2447,6 +2450,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					  endFontClass();
   					}
 <Body>{KEYWORD}/{BN}*"(" 		{
+    printf("KEYWORD/ BN %s\n",yytext);
                                           if (skipLanguageSpecificKeyword(yytext)) REJECT;
   					  startFontClass("keyword");
   					  codifyLines(yytext);
@@ -2454,6 +2458,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
   				          g_name.resize(0);g_type.resize(0);
   					}
 <FuncCall>"in"/{BN}*			{
+    printf("<funcCall 1 %s\n",yytext);
 					  if (!g_inForEachExpression) REJECT;
   					  startFontClass("keywordflow");
   					  codifyLines(yytext);
@@ -2465,6 +2470,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
   				          g_name.resize(0);g_type.resize(0);
 					}
 <Body>{FLOWKW}/{BN}*"(" 			{
+    printf("FLOWKW/ BN %s\n",yytext);
   					  startFontClass("keywordflow");
   					  codifyLines(yytext);
 					  endFontClass();
@@ -2473,6 +2479,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					  BEGIN(FuncCall);
   					}
 <Body>{FLOWCONDITION}/{BN}*"("          {
+                                        printf("FLOWCONDITION/BN %s\n",yytext);
                                           if (g_currentMemberDef && g_currentMemberDef->isFunction())
                                           {
                                             g_currentMemberDef->addFlowKeyWord();
@@ -2485,6 +2492,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
                                           BEGIN(FuncCall);
                                         }
 <Body>{FLOWKW}/([^a-z_A-Z0-9]) 		{
+                                        printf("FLOWKW/ a-z %s\n",yytext);
   					  startFontClass("keywordflow");
   					  codifyLines(yytext);
 					  endFontClass();
@@ -2494,6 +2502,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					  }
   					}
 <Body>{FLOWCONDITION}/([^a-z_A-Z0-9]) 	{
+                                        printf("FLOWCONDITION/a-z0-9 %s\n",yytext);
                                           if (g_currentMemberDef && g_currentMemberDef->isFunction())
                                           {
                                             g_currentMemberDef->addFlowKeyWord();
@@ -2507,11 +2516,13 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
                                           }
                                         }
 <Body>{FLOWKW}/{B}* 			{
+                                        printf("FLOWKW/ B %s\n",yytext);
   					  startFontClass("keywordflow");
   					  codifyLines(yytext);
 					  endFontClass();
   					}
 <Body>{FLOWCONDITION}/{B}*              {
+                                        printf("FLOWCONDITION/B %s\n",yytext);
                                           if (g_currentMemberDef && g_currentMemberDef->isFunction())
                                           {
                                             g_currentMemberDef->addFlowKeyWord();
@@ -2528,6 +2539,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					  BEGIN(FuncCall);
                                         }
 <Body>[\\|\)\+\-\/\%\~\!]		{
+    printf("<body> %s\n",yytext);
   					  g_code->codify(yytext);
   				          g_name.resize(0);g_type.resize(0);
 					  if (*yytext==')')
@@ -2538,6 +2550,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					  }
   					}
 <Body,TemplDecl,ObjCMethod>{TYPEKW}/{B}* {
+    printf("<body>TYPEKW/B %s\n",yytext);
   					  startFontClass("keywordtype");
 					  g_code->codify(yytext);
 					  endFontClass();
@@ -2545,6 +2558,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
   					  g_name+=yytext; 
   					}
 <Body,TemplDecl,ObjCMethod>{TYPEKWSL}/{B}* {
+    printf("<body>TYPEKWSL/B %s\n",yytext);
                                           if (!g_insideSlice)
                                           {
                                             REJECT;
@@ -2659,6 +2673,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
   					  BEGIN( FuncCall );
 					}
 <FuncCall,Body,MemberCall,MemberCall2,SkipInits,InlineInit>{RAWBEGIN}	{
+    printf("FuncCall RAWBEGIN %s\n",yytext);
                                           QCString text=yytext;
                                           int i=text.find('R');
                                           g_code->codify(text.left(i+1));
@@ -2671,6 +2686,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
   					  BEGIN( RawString );
                                         }
 <FuncCall,Body,MemberCall,MemberCall2,SkipInits,InlineInit>\"	{
+    printf("<funcCall 2 %s\n",yytext);
 					  startFontClass("stringliteral");
   					  g_code->codify(yytext);
   					  g_lastStringContext=YY_START;
@@ -2678,6 +2694,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
   					  BEGIN( SkipString );
   					}
 <FuncCall,Body,MemberCall,MemberCall2,SkipInits,InlineInit>\'	{
+    printf("<funcCall 3 %s\n",yytext);
 					  startFontClass("stringliteral");
   					  g_code->codify(yytext);
   					  g_lastStringContext=YY_START;
@@ -2704,6 +2721,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
   					  BEGIN( g_lastStringContext );
   					}
 <SkipString,SkipStringS>\\.		{
+    printf("<skipstring> %s\n",yytext);
   					  g_code->codify(yytext);
 					}
 <RawString>{RAWEND}                     { 
@@ -2716,7 +2734,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
                                           }
                                         }
 <RawString>[^)\n]+                      { g_code->codify(yytext); }
-<RawString>.                            { g_code->codify(yytext); }
+<RawString>.                            { printf("<rawstring> %s\n",yytext);  g_code->codify(yytext); }
 <RawString>\n                           { codifyLines(yytext); }
 <SkipVerbString>[^"\n]+			{
   					  g_code->codify(yytext);
@@ -2730,7 +2748,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					  BEGIN( g_lastVerbStringContext );
 					}
 <SkipVerbString>.			{
-  					  g_code->codify(yytext);
+  					 printf("<skipberbstring> %s\n",yytext);   g_code->codify(yytext);
   					}
 <SkipVerbString>\n			{
   					  codifyLines(yytext);
@@ -2757,6 +2775,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
   					  g_code->codify(yytext);
   					}
 <Body,MemberCall,MemberCall2,FuncCall>"'"((\\0[Xx0-9]+)|(\\.)|(.))"'"	{
+    printf("<funcCall 4 %s\n",yytext);
   					  startFontClass("charliteral"); 
   					  g_code->codify(yytext);
 					  endFontClass();
@@ -3015,6 +3034,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					  g_code->codify(yytext);
 					}
 <MemberCall2,FuncCall>{KEYWORD}/([^a-z_A-Z0-9]) {
+    printf("FuncCall KEYWORD a-z %s\n",yytext);
 					  //addParmType();
 					  //g_parmName=yytext; 
                                           if (skipLanguageSpecificKeyword(yytext)) REJECT;
@@ -3023,6 +3043,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					  endFontClass();
 					}
 <MemberCall2,FuncCall,OldStyleArgs,TemplCast>{TYPEKW}/([^a-z_A-Z0-9]) {
+    printf("FuncCall KEYPEKW a-z %s\n",yytext);
 					  addParmType();
 					  g_parmName=yytext; 
   					  startFontClass("keywordtype");
@@ -3030,6 +3051,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					  endFontClass();
 					}
 <MemberCall2,FuncCall,OldStyleArgs,TemplCast>{TYPEKWSL}/([^a-z_A-Z0-9]) {
+    printf("FuncCall TYPEKWSL a-z %s\n",yytext);
                                           if (!g_insideSlice)
                                           {
                                             REJECT;
@@ -3044,6 +3066,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
                                           }
 					}
 <MemberCall2,FuncCall>{FLOWKW}/([^a-z_A-Z0-9]) {
+    printf("FuncCall FLOWKW a-z %s\n",yytext);
 					  addParmType();
 					  g_parmName=yytext; 
   					  startFontClass("keywordflow");
@@ -3051,6 +3074,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					  endFontClass();
 					}
 <MemberCall2,FuncCall>{FLOWCONDITION}/([^a-z_A-Z0-9]) {
+                            printf("FuncCall FLOWCONDITION a-z %s\n",yytext);
                                           if (g_currentMemberDef && g_currentMemberDef->isFunction())
                                           {
                                             g_currentMemberDef->addFlowKeyWord();
@@ -3062,21 +3086,25 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
                                           endFontClass();
                                         }
 <MemberCall2,FuncCall>{ID}(({B}*"<"[^\n\[\](){}<>]*">")?({B}*"::"{B}*{ID})?)* {
+    printf("<funcCall ID %s\n",yytext);
 					  addParmType();
 					  g_parmName=yytext; 
 					  generateClassOrGlobalLink(*g_code,yytext,!g_insideBody);
 					}
 <FuncCall>";"				{ // probably a cast, not a function call
+    printf("<funcCall 5 %s\n",yytext);
   					  g_code->codify(yytext);
 					  g_inForEachExpression = FALSE;
 					  BEGIN( Body );
   					}
 <MemberCall2,FuncCall>,			{
+                            printf("FuncCall codify %s\n",yytext);
   					  g_code->codify(yytext);
 					  g_theVarContext.addVariable(g_parmType,g_parmName);
 					  g_parmType.resize(0);g_parmName.resize(0);
 					}
 <MemberCall2,FuncCall>"{"		{
+                            printf("FuncCall15 \{ %s\n",yytext);
                                           if (g_bracketCount>0)
                                           {
                                             g_code->codify(yytext);
@@ -3106,6 +3134,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
                                           g_code->codify(yytext);
                                         }
 <MemberCall2,FuncCall>"("		{
+                            printf("FuncCall8 \( %s\n",yytext);
 					  g_parmType.resize(0);g_parmName.resize(0);
   					  g_code->codify(yytext);
   					  g_bracketCount++; 
@@ -3116,6 +3145,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					  }
 					}
 <MemberCall2,FuncCall>{OPERATOR}        { // operator
+                            printf("FuncCall OPERATOR %s\n",yytext);
   					  if (qstrcmp(yytext,"*") && 
 					      qstrcmp(yytext,"&") &&
 					      qstrcmp(yytext,"^") &&
@@ -3127,6 +3157,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
   					  g_code->codify(yytext);
   					}
 <MemberCall,MemberCall2,FuncCall>("*"{B}*)?")"	{ 
+                            printf("FuncCall B? %s\n",yytext);
                                           if (yytext[0]==')') // no a pointer cast
                                           {
                                             //printf("addVariable(%s,%s)\n",g_parmType.data(),g_parmName.data());
@@ -3284,6 +3315,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					  BEGIN( SkipCPP );
   					}
 <CallEnd>.				{
+    printf("<callend> %s\n",yytext);
   					  unput(*yytext);
                                           if (!g_insideBody) 
 					  {
@@ -3324,14 +3356,17 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					  generateClassOrGlobalLink(*g_code,yytext);
   					}
 <FuncCall>{ID}/"("			{
+    printf("FuncCall11 ID \(  %s\n",yytext);
 					  generateFunctionLink(*g_code,yytext);
 					}
 <FuncCall>{ID}/("."|"->")               { 
+    printf("FuncCall12 ID ->  %s\n",yytext);
 					  g_name=yytext; 
 					  generateClassOrGlobalLink(*g_code,yytext);
 					  BEGIN( MemberCall2 ); 
 					}
 <FuncCall,MemberCall2>("("{B}*("*"{B}*)+{ID}*{B}*")"{B}*)/("."|"->") { 
+    printf("FuncCall BIDB %s\n",yytext);
   					  g_code->codify(yytext);
 					  int s=0;while (!isId(yytext[s])) s++;
                                           int e=(int)yyleng-1;while (!isId(yytext[e])) e--;
@@ -3394,6 +3429,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					  BEGIN( g_lastCContext ) ;
   					}
 <SkipCxxComment>.			{
+    printf("<skipcxxcomment> %s\n",yytext);
   					  g_code->codify(yytext);
   					}
 <RemoveSpecialCComment>"*/"{B}*\n({B}*\n)*({B}*(("//@"[{}])|("/*@"[{}]"*/")){B}*\n)?{B}*"/*"[*!]/[^/*] {
@@ -3450,6 +3486,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					  BEGIN( g_lastSkipCppContext ) ;
 					}
 <*>\n{B}*"//@"[{}].*\n			{ // remove one-line group marker
+printf("<*> // %s\n",yytext);
   					  if (Config_getBool(STRIP_CODE_COMMENTS))
 					  {
 					    g_yyLineNr+=2;
@@ -3468,6 +3505,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					  }
   					}
 <*>\n{B}*"/*@"[{}]			{ // remove one-line group marker
+printf("<*>n /*@ %s\n",yytext);
 					  if (Config_getBool(STRIP_CODE_COMMENTS))
   					  {
 					    g_lastSpecialCContext = YY_START;
@@ -3487,6 +3525,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
   					  }
   					}
 <*>^{B}*"//@"[{}].*\n			{ // remove one-line group marker
+printf("<*> //@ %s\n",yytext);
   					  if (Config_getBool(STRIP_CODE_COMMENTS))
 					  {
 					    g_yyLineNr++;
@@ -3500,6 +3539,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					  }
   					}
 <*>^{B}*"/*@"[{}]			{ // remove multi-line group marker
+printf("<*> /*@ %s\n",yytext);
 					  if (Config_getBool(STRIP_CODE_COMMENTS))
 					  {
 					    g_lastSpecialCContext = YY_START;
@@ -3518,6 +3558,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
  					  }
   					}
 <*>^{B}*"//"[!/][^\n]*\n		{ // remove special one-line comment
+printf("<*>^ // %s\n",yytext);
   					  if (Config_getBool(STRIP_CODE_COMMENTS))
 					  {
 					    g_yyLineNr++;
@@ -3531,6 +3572,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					  }
   					}
 <*>"//"[!/][^\n]*\n			{ // strip special one-line comment
+printf("<*>2 // %s\n",yytext);
                                           if (YY_START==SkipComment || YY_START==SkipString) REJECT;
   					  if (Config_getBool(STRIP_CODE_COMMENTS))
 					  {
@@ -3545,12 +3587,14 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					  }
   					}
 <*>"/*[tag:"[^\]\n]*"]*/"{B}*		{ // special pattern /*[tag:filename]*/ to force linking to a tag file
+printf("<*>tag // %s\n",yytext);
   					  g_forceTagReference=yytext;
 					  int s=g_forceTagReference.find(':');
 					  int e=g_forceTagReference.findRev(']');
 					  g_forceTagReference = g_forceTagReference.mid(s+1,e-s-1);
   					}
 <*>\n{B}*"/*"[!*]/[^/*] 		{
+printf("<*>3 // %s\n",yytext);
 					  if (Config_getBool(STRIP_CODE_COMMENTS))
   					  {
 					    g_lastSpecialCContext = YY_START;
@@ -3570,6 +3614,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
   					  }
 					}
 <*>^{B}*"/*"[!*]/[^/*]			{ // special C comment block at a new line
+printf("<*>3 /* %s\n",yytext);
 					  if (Config_getBool(STRIP_CODE_COMMENTS))
 					  {
 					    g_lastSpecialCContext = YY_START;
@@ -3588,6 +3633,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
  					  }
 					}
 <*>"/*"[!*]/[^/*]			{ // special C comment block half way a line
+printf("<*>4 /* %s\n",yytext);
                                           if (YY_START==SkipString) REJECT;
 					  if (Config_getBool(STRIP_CODE_COMMENTS))
 					  {
@@ -3607,6 +3653,8 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					  }
 					}
 <*>"/*"("!"?)"*/"			{ 
+printf("<*>5 /* %s\n",yytext);
+                                          if (YY_START==SkipString) REJECT;
                                           if (YY_START==SkipString) REJECT;
                                           if (!Config_getBool(STRIP_CODE_COMMENTS))
   					  {
@@ -3641,10 +3689,12 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					  BEGIN( SkipCxxComment ) ;
 					}
 <*>"("|"["					{
+printf("<*>5 ([  %s\n",yytext);
   					  g_code->codify(yytext);
 					  g_theCallContext.pushScope();
   					}
 <*>")"|"]"					{
+printf("<*>5 )]  %s\n",yytext);
   					  g_code->codify(yytext);
 					  g_theCallContext.popScope();
   					}
@@ -3653,6 +3703,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
   					  codifyLines(yytext); 
   					}
 <*>.					{
+printf("<*>8 . %s\n",yytext);
 					  g_yyColNr++;
   					  g_code->codify(yytext);
 					}
