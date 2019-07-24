@@ -1934,6 +1934,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					  BEGIN(Body);
   					}
 <Body,ClassVar,Bases>"-"|"+"		{
+    printf("<Body - + %s\n",yytext);
 					  if (!g_insideObjC || g_insideBody)
 					  { 
   					    g_code->codify(yytext);
@@ -2444,13 +2445,14 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					  endFontClass();
   					}
 <Body>{KEYWORD}/{B}* 			{
+    printf("<Body KEYWORD/B %s\n",yytext);
                                           if (skipLanguageSpecificKeyword(yytext)) REJECT;
   					  startFontClass("keyword");
   					  codifyLines(yytext);
 					  endFontClass();
   					}
 <Body>{KEYWORD}/{BN}*"(" 		{
-    printf("KEYWORD/ BN %s\n",yytext);
+    printf("<Body KEYWORD/ BN %s\n",yytext);
                                           if (skipLanguageSpecificKeyword(yytext)) REJECT;
   					  startFontClass("keyword");
   					  codifyLines(yytext);
@@ -2470,7 +2472,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
   				          g_name.resize(0);g_type.resize(0);
 					}
 <Body>{FLOWKW}/{BN}*"(" 			{
-    printf("FLOWKW/ BN %s\n",yytext);
+    printf("<Body FLOWKW/ BN %s\n",yytext);
   					  startFontClass("keywordflow");
   					  codifyLines(yytext);
 					  endFontClass();
@@ -2479,7 +2481,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					  BEGIN(FuncCall);
   					}
 <Body>{FLOWCONDITION}/{BN}*"("          {
-                                        printf("FLOWCONDITION/BN %s\n",yytext);
+                                        printf("<Body FLOWCONDITION/BN %s\n",yytext);
                                           if (g_currentMemberDef && g_currentMemberDef->isFunction())
                                           {
                                             g_currentMemberDef->addFlowKeyWord();
@@ -2492,7 +2494,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
                                           BEGIN(FuncCall);
                                         }
 <Body>{FLOWKW}/([^a-z_A-Z0-9]) 		{
-                                        printf("FLOWKW/ a-z %s\n",yytext);
+                                        printf("<Body FLOWKW/ a-z %s\n",yytext);
   					  startFontClass("keywordflow");
   					  codifyLines(yytext);
 					  endFontClass();
@@ -2502,7 +2504,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					  }
   					}
 <Body>{FLOWCONDITION}/([^a-z_A-Z0-9]) 	{
-                                        printf("FLOWCONDITION/a-z0-9 %s\n",yytext);
+                                        printf("<Body FLOWCONDITION/a-z0-9 %s\n",yytext);
                                           if (g_currentMemberDef && g_currentMemberDef->isFunction())
                                           {
                                             g_currentMemberDef->addFlowKeyWord();
@@ -2516,7 +2518,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
                                           }
                                         }
 <Body>{FLOWKW}/{B}* 			{
-                                        printf("FLOWKW/ B %s\n",yytext);
+                                        printf("<Body FLOWKW/ B %s\n",yytext);
   					  startFontClass("keywordflow");
   					  codifyLines(yytext);
 					  endFontClass();
@@ -2621,6 +2623,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
   					  codifyLines(yytext);
 					}
 <Body,FuncCall>{CASTKW}"<"                { // static_cast<T>(
+printf("<Body CASTKW/BN %s\n",yytext);
   					  startFontClass("keyword");
   					  codifyLines(yytext);
 					  endFontClass();
@@ -2628,11 +2631,13 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					  BEGIN(TemplCast);
 					}
 <Body>"$this->"{SCOPENAME}/{BN}*[;,)\]] { // PHP member variable
+printf("<Body SCOPENAME PHP /BN %s\n",yytext);
 					  addType();
 					  generatePHPVariableLink(*g_code,yytext);
   					  g_name+=yytext+7; 
                                         }
 <Body,TemplCast>{SCOPENAME}{B}*"<"[^\n\/\-\.\{\"\>\(]*">"("::"{ID})*/{B}* { // A<T> *pt;
+printf("<Body SCOPENAME2 B %s\n",yytext);
 					  int i=QCString(yytext).find('<');
 					  QCString kw = QCString(yytext).left(i).stripWhiteSpace();
 					  if (kw.right(5)=="_cast" && YY_START==Body)
@@ -2644,6 +2649,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
   					  g_name+=yytext; 
 					}
 <Body>{SCOPENAME}/{BN}*[:;,)\]]		{ // "int var;" or "var, var2" or "debug(f) macro" , or int var : 5;
+printf("<Body SCOPENAME/BN %s\n",yytext);
 					  addType();
 					  // changed this to generateFunctionLink, see bug 624514
 					  //generateClassOrGlobalLink(*g_code,yytext,FALSE,TRUE);
@@ -2651,11 +2657,13 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
   					  g_name+=yytext; 
 					}
 <Body>{SCOPENAME}/{B}* 			{ // p->func()
+printf("<Body SCOPENAME/B1 %s\n",yytext);
 					  addType();
 					  generateClassOrGlobalLink(*g_code,yytext);
   					  g_name+=yytext; 
 					}
 <Body>"("{B}*("*"{B}*)+{SCOPENAME}*{B}*")"/{B}*	{  // (*p)->func() but not "if (p) ..."
+printf("<Body SCOPENAME/B2 %s\n",yytext);
 					  g_code->codify(yytext);
 					  int s=0;while (s<(int)yyleng && !isId(yytext[s])) s++;
                                           int e=(int)yyleng-1;while (e>=0 && !isId(yytext[e])) e--;
@@ -2665,6 +2673,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					}
 <Body>{SCOPETNAME}{B}*"<"[^\n\/\-\.\{\"\>]*">"/{BN}*"(" |
 <Body>{SCOPETNAME}/{BN}*"("		{ // a() or c::a() or t<A,B>::a() or A\B\foo()
+printf("<Body SCOPENAME/B3 %s\n",yytext);
   					  addType();
 					  generateFunctionLink(*g_code,yytext);
   					  g_bracketCount=0;
@@ -2817,6 +2826,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					  }
   					}
 <MemberCall>{SCOPENAME}/{B}*		{
+printf("<MemberCall SCOPENAME/B %s\n",yytext);
 					  if (g_theCallContext.getScope())
 					  {
 					    DBG_CTX((stderr,"g_theCallContext.getClass()=%p\n",g_theCallContext.getScope()));
@@ -3462,6 +3472,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					  BEGIN(g_memCallContext); 
 					}
 <*>\n({B}*"//"[!/][^\n]*\n)+		{ // remove special one-line comment
+printf("<*> special %s\n",yytext);
 					  if (YY_START==SkipCPP) REJECT;
   					  if (Config_getBool(STRIP_CODE_COMMENTS))
 					  {
@@ -3481,6 +3492,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					  }
   					}
 <SkipCPP>\n/.*\n			{ 
+    printf("<skipcpp %s\n",yytext);
 					  endFontClass();
   					  codifyLines(yytext);
 					  BEGIN( g_lastSkipCppContext ) ;
@@ -3703,9 +3715,10 @@ printf("<*>5 )]  %s\n",yytext);
   					  codifyLines(yytext); 
   					}
 <*>.					{
-printf("<*>8 . %s\n",yytext);
+printf("<*>8 . %d %s\n",g_yyColNr,yytext);
 					  g_yyColNr++;
   					  g_code->codify(yytext);
+  					  codifyLines(yytext); 
 					}
   /*
 <*>([ \t\n]*"\n"){2,}			{ // combine multiple blank lines
