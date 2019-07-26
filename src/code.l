@@ -2729,15 +2729,18 @@ printf("<Body SCOPENAME/B3 %s\n",yytext);
   					  BEGIN( SkipStringS );
   					}
 <SkipString>[^\"\\\r\n]*		{ 
+    printf("<skipstring %s\n",yytext);
   					  g_code->codify(yytext);
 					}
 <SkipStringS>[^\'\\\r\n]*		{
+    printf("<skipstringS %s\n",yytext);
   					  g_code->codify(yytext);
   					}
 <SkipString,SkipStringS>"//"|"/*"	{
   					  g_code->codify(yytext);
   					}
 <SkipString>@?\"			{
+    printf("<skipstring  @\"%s\n",yytext);
   					  g_code->codify(yytext);
 					  endFontClass();
   					  BEGIN( g_lastStringContext );
