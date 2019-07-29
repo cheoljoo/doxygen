@@ -965,11 +965,11 @@ static void generateClassOrGlobalLink(CodeOutputInterface &ol,const char *clName
   MemberDef *md=0;
   bool isLocal=FALSE;
 
-  //printf("generateClassOrGlobalLink(className=%s)\n",className.data());
+  printf("generateClassOrGlobalLink(className=%s)\n",className.data());
   if (!g_prefixed_with_this_keyword || (lcd=g_theVarContext.findVariable(className))==0) // not a local variable
   {
     Definition *d = g_currentDefinition;
-    //printf("d=%s g_sourceFileDef=%s\n",d?d->name().data():"<none>",g_sourceFileDef?g_sourceFileDef->name().data():"<none>");
+    printf("d=%s g_sourceFileDef=%s\n",d?d->name().data():"<none>",g_sourceFileDef?g_sourceFileDef->name().data():"<none>");
     cd = getResolvedClass(d,g_sourceFileDef,className,&md);
     DBG_CTX((stderr,"non-local variable name=%s context=%d cd=%s md=%s!\n",
     className.data(),g_theVarContext.count(),cd?cd->name().data():"<none>",
@@ -991,7 +991,7 @@ static void generateClassOrGlobalLink(CodeOutputInterface &ol,const char *clName
       writeMultiLineCodeLink(*g_code,nd,clName);
       return;
     }
-    //printf("md=%s\n",md?md->name().data():"<none>");
+    printf("md=%s\n",md?md->name().data():"<none>");
     DBG_CTX((stderr,"is found as a type cd=%s nd=%s\n",
           cd?cd->name().data():"<null>",
           nd?nd->name().data():"<null>"));
@@ -1005,10 +1005,10 @@ static void generateClassOrGlobalLink(CodeOutputInterface &ol,const char *clName
   }
   else
   {
-    //printf("local variable!\n");
+    printf("local variable!\n");
     if (lcd!=VariableContext::dummyContext) 
     {
-      //printf("non-dummy context lcd=%s!\n",lcd->name().data());
+      printf("non-dummy context lcd=%s!\n",lcd->name().data());
       g_theCallContext.setScope(lcd);
 
       // to following is needed for links to a global variable, but is
@@ -1062,7 +1062,7 @@ static void generateClassOrGlobalLink(CodeOutputInterface &ol,const char *clName
       if (md==0) // not found as a typedef
       {
 	md = setCallContextForVar(clName);
-	//printf("setCallContextForVar(%s) md=%p g_currentDefinition=%p\n",clName,md,g_currentDefinition);
+	printf("setCallContextForVar(%s) md=%p g_currentDefinition=%p\n",clName,md,g_currentDefinition);
 	if (md && g_currentDefinition)
 	{
 	  DBG_CTX((stderr,"%s accessible from %s? %d md->getOuterScope=%s\n",
