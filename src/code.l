@@ -2185,6 +2185,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					}
 <ClassName>{ID}("."{ID})*	        |
 <ClassName>{ID}("::"{ID})*	        {
+    printf("classname08 %s\n",yytext);
                                           if(g_insideCS)
                                             g_curClassName=substitute(yytext,".","::");
                                           else
@@ -2277,6 +2278,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					  generateClassOrGlobalLink(*g_code,yytext);
   					}
 <ClassName,ClassVar,CppCliTypeModifierFollowup>{B}*":"{B}*	{
+    printf("classvar02  %s\n",yytext);
   					  codifyLines(yytext);
 					  g_curClassBases.clear();
   					  BEGIN( Bases ); 
