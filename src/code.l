@@ -922,7 +922,7 @@ static bool getLink(const char *className,
 		    const char *text=0,
 		    bool varOnly=FALSE)
 {
-  //printf("getLink(%s,%s) g_curClassName=%s\n",className,memberName,g_curClassName.data());
+  printf("getLink(%s,%s) g_curClassName=%s\n",className,memberName,g_curClassName.data());
   QCString m=removeRedundantWhiteSpace(memberName);
   QCString c=className;
   if (!getLinkInScope(c,m,memberName,ol,text,varOnly))
@@ -1031,8 +1031,8 @@ static void generateClassOrGlobalLink(CodeOutputInterface &ol,const char *clName
     {
       QCString anchor;
       anchor.sprintf("_a%d",g_anchorCount);
-      //printf("addExampleClass(%s,%s,%s)\n",anchor.data(),g_exampleName.data(),
-      //                                   g_exampleFile.data());
+      printf("addExampleClass(%s,%s,%s)\n",anchor.data(),g_exampleName.data(),
+                                         g_exampleFile.data());
       if (cd->addExample(anchor,g_exampleName,g_exampleFile))
       {
 	ol.writeCodeAnchor(anchor);
@@ -1122,16 +1122,16 @@ static bool generateClassMemberLink(CodeOutputInterface &ol,MemberDef *xmd,const
   // extract class definition of the return type in order to resolve
   // a->b()->c() like call chains
 
-  //printf("type=`%s' args=`%s' class=%s\n",
-  //  xmd->typeString(),xmd->argsString(),
-  //  xmd->getClassDef()->name().data());
+  printf("generateClassMemberLink type=`%s' args=`%s' class=%s\n",
+    xmd->typeString(),xmd->argsString(),
+    xmd->getClassDef()->name().data());
 
   if (g_exampleBlock)
   {
     QCString anchor;
     anchor.sprintf("a%d",g_anchorCount);
-    //printf("addExampleFile(%s,%s,%s)\n",anchor.data(),g_exampleName.data(),
-    //                                  g_exampleFile.data());
+    printf("addExampleFile(%s,%s,%s)\n",anchor.data(),g_exampleName.data(),
+                                      g_exampleFile.data());
     if (xmd->addExample(anchor,g_exampleName,g_exampleFile))
     {
       ol.writeCodeAnchor(anchor);
@@ -1178,7 +1178,7 @@ static bool generateClassMemberLink(CodeOutputInterface &ol,Definition *def,cons
   {
     ClassDef *cd = (ClassDef*)def;
     MemberDef *xmd = cd->getMemberByName(memName);
-    //printf("generateClassMemberLink(class=%s,member=%s)=%p\n",def->name().data(),memName,xmd);
+    printf("generateClassMemberLink(class=%s,member=%s)=%p\n",def->name().data(),memName,xmd);
     if (xmd)
     {
       return generateClassMemberLink(ol,xmd,memName);
@@ -1214,8 +1214,8 @@ static bool generateClassMemberLink(CodeOutputInterface &ol,Definition *def,cons
 static void generateMemberLink(CodeOutputInterface &ol,const QCString &varName,
             char *memName)
 {
-  //printf("generateMemberLink(object=%s,mem=%s) classScope=%s\n",
-  //    varName.data(),memName,g_classScope.data());
+  printf("generateMemberLink(object=%s,mem=%s) classScope=%s\n",
+      varName.data(),memName,g_classScope.data());
 
   if (varName.isEmpty()) return;
 
@@ -1333,6 +1333,7 @@ static void generateFunctionLink(CodeOutputInterface &ol,const char *funcName)
   QCString funcWithFullScope=locFunc;
   QCString fullScope=locScope;
   DBG_CTX((stdout,"*** locScope=%s locFunc=%s\n",locScope.data(),locFunc.data()));
+  printf("generateFunctionLink  locScope=%s locFunc=%s\n",locScope.data(),locFunc.data() );
   int len=2;
   int i=locFunc.findRev("::");
   if (g_currentMemberDef && g_currentMemberDef->getClassDef() &&
