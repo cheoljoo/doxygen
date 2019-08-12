@@ -388,8 +388,6 @@ public:
   void visitPost(DocXRefItem *);
   void visitPre(DocInternalRef *);
   void visitPost(DocInternalRef *);
-  void visitPre(DocCopy *);
-  void visitPost(DocCopy *);
   void visitPre(DocText *);
   void visitPost(DocText *);
   void visitPre(DocHtmlBlockQuote *);
@@ -642,7 +640,9 @@ void PerlModDocVisitor::visit(DocStyleChange *s)
   {
     case DocStyleChange::Bold:          style = "bold"; break;
     case DocStyleChange::Strike:        style = "strike"; break;
+    case DocStyleChange::Del:           style = "del"; break;
     case DocStyleChange::Underline:     style = "underline"; break;
+    case DocStyleChange::Ins:           style = "ins"; break;
     case DocStyleChange::Italic:        style = "italic"; break;
     case DocStyleChange::Code:          style = "code"; break;
     case DocStyleChange::Subscript:     style = "subscript"; break;
@@ -749,7 +749,7 @@ void PerlModDocVisitor::visit(DocInclude *inc)
 void PerlModDocVisitor::visit(DocIncOperator *)
 {
 #if 0
-  //printf("DocIncOperator: type=%d first=%d, last=%d text=`%s'\n",
+  //printf("DocIncOperator: type=%d first=%d, last=%d text='%s'\n",
   //    op->type(),op->isFirst(),op->isLast(),op->text().data());
   if (op->isFirst())
   {
@@ -1383,14 +1383,6 @@ void PerlModDocVisitor::visitPost(DocInternalRef *)
 {
   closeSubBlock();
   closeItem();
-}
-
-void PerlModDocVisitor::visitPre(DocCopy *)
-{
-}
-
-void PerlModDocVisitor::visitPost(DocCopy *)
-{
 }
 
 void PerlModDocVisitor::visitPre(DocText *)
@@ -2283,13 +2275,13 @@ bool PerlModGenerator::createOutputDir(QDir &perlModDir)
       dir.setPath(QDir::currentDirPath());
       if (!dir.mkdir(outputDirectory))
       {
-	err("tag OUTPUT_DIRECTORY: Output directory `%s' does not "
+	err("tag OUTPUT_DIRECTORY: Output directory '%s' does not "
 	    "exist and cannot be created\n",outputDirectory.data());
 	exit(1);
       }
       else
       {
-	msg("Notice: Output directory `%s' does not exist. "
+	msg("Notice: Output directory '%s' does not exist. "
 	    "I have created it for you.\n", outputDirectory.data());
       }
       dir.cd(outputDirectory);

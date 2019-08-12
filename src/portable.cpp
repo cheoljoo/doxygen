@@ -396,7 +396,7 @@ const char *portable_commandExtension()
 
 bool portable_fileSystemIsCaseSensitive()
 {
-#if defined(_WIN32) || defined(macintosh) || defined(__MACOSX__) || defined(__APPLE__)
+#if defined(_WIN32) || defined(macintosh) || defined(__MACOSX__) || defined(__APPLE__) || defined(__CYGWIN__)
   return FALSE;
 #else
   return TRUE;
@@ -463,7 +463,18 @@ void portable_correct_path(void)
 {
 #if defined(_WIN32) && !defined(__CYGWIN__)
   const char *p = portable_getenv("PATH");
+  if (!p) return; // no path nothing to correct
   QCString result = substitute(p,'/','\\');
   if (result!=p) portable_setenv("PATH",result.data());
 #endif
 }
+
+void portable_unlink(const char *fileName)
+{
+#if defined(_WIN32) && !defined(__CYGWIN__)
+  _unlink(fileName);
+#else
+  unlink(fileName);
+#endif
+}
+

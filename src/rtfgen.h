@@ -127,9 +127,9 @@ class RTFGenerator : public OutputGenerator
     void writeAnchor(const char *fileName,const char *name);
     void startCodeFragment();
     void endCodeFragment();
-    void writeLineNumber(const char *,const char *,const char *,int l) { t << QString("%1").arg(l,5) << " "; }
-    void startCodeLine(bool) { col=0; }
-    void endCodeLine() { lineBreak(); }
+    void writeLineNumber(const char *,const char *,const char *,int l);
+    void startCodeLine(bool);
+    void endCodeLine();
     void startEmphasis() { t << "{\\i ";  }
     void endEmphasis()   { t << "}"; }
     void startBold()     { t << "{\\b "; }
@@ -202,16 +202,16 @@ class RTFGenerator : public OutputGenerator
     void endDescTableData();
     
     void startDotGraph();
-    void endDotGraph(const DotClassGraph &);
+    void endDotGraph(DotClassGraph &);
     void startInclDepGraph();
-    void endInclDepGraph(const DotInclDepGraph &);
+    void endInclDepGraph(DotInclDepGraph &);
     void startGroupCollaboration();
-    void endGroupCollaboration(const DotGroupCollaboration &g);
+    void endGroupCollaboration(DotGroupCollaboration &g);
     void startCallGraph();
-    void endCallGraph(const DotCallGraph &);
+    void endCallGraph(DotCallGraph &);
     void startDirDepGraph();
-    void endDirDepGraph(const DotDirDeps &g);
-    void writeGraphicalHierarchy(const DotGfxHierarchyTable &) {}
+    void endDirDepGraph(DotDirDeps &g);
+    void writeGraphicalHierarchy(DotGfxHierarchyTable &) {}
 
     void startMemberGroupHeader(bool);
     void endMemberGroupHeader();

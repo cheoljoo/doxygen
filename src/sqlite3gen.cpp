@@ -924,7 +924,7 @@ static int insertPath(QCString name, bool local=TRUE, bool found=TRUE, int type=
 
 static void recordMetadata()
 {
-  bindTextParameter(meta_insert,":doxygen_version",versionString);
+  bindTextParameter(meta_insert,":doxygen_version",getVersion());
   bindTextParameter(meta_insert,":schema_version","0.2.0"); //TODO: this should be a constant somewhere; not sure where
   bindTextParameter(meta_insert,":generated_at",dateToString(TRUE), FALSE);
   bindTextParameter(meta_insert,":generated_on",dateToString(FALSE), FALSE);
@@ -2009,7 +2009,11 @@ static void generateSqlite3ForClass(const ClassDef *cd)
     if (nm.isEmpty() && ii->fileDef) nm = ii->fileDef->docName();
     if (!nm.isEmpty())
     {
-      int header_id=insertPath(ii->fileDef->absFilePath(),!ii->fileDef->isReference());
+      int header_id=-1;
+      if (ii->fileDef)
+      {
+        insertPath(ii->fileDef->absFilePath(),!ii->fileDef->isReference());
+      }
       DBG_CTX(("-----> ClassDef includeInfo for %s\n", nm.data()));
       DBG_CTX(("       local    : %d\n", ii->local));
       DBG_CTX(("       imported : %d\n", ii->imported));

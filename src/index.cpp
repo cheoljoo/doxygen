@@ -40,6 +40,7 @@
 #include "htmlhelp.h"
 #include "ftvhelp.h"
 #include "dot.h"
+#include "dotgfxhierarchytable.h"
 #include "pagedef.h"
 #include "dirdef.h"
 #include "vhdldocgen.h"
@@ -285,7 +286,6 @@ void startFile(OutputList &ol,const char *name,const char *manName,
   }
   ol.writeSplitBar(altSidebarName ? altSidebarName : name);
   ol.writeSearchInfo();
-  resetDotNodeNumbering();
 }
 
 void endFile(OutputList &ol,bool skipNavIndex,bool skipEndContents,
@@ -620,7 +620,7 @@ static void writeDirTreeNode(OutputList &ol, DirDef *dd, int level, FTVHelp* ftv
                (tocExpand &&              // or toc expand and
                 dd->getFiles() && dd->getFiles()->count()>0 // there are files
                );
-  //printf("gd=`%s': pageDict=%d\n",gd->name().data(),gd->pageDict->count());
+  //printf("gd='%s': pageDict=%d\n",gd->name().data(),gd->pageDict->count());
   if (addToIndex)
   {
     Doxygen::indexList->addContentsItem(isDir,dd->shortName(),dd->getReference(),dd->getOutputFileBase(),0,TRUE,TRUE);
@@ -4006,7 +4006,7 @@ static void writeGroupTreeNode(OutputList &ol, GroupDef *gd, int level, FTVHelp*
     }
 
     bool isDir = hasSubGroups || hasSubPages || numSubItems>0;
-    //printf("gd=`%s': pageDict=%d\n",gd->name().data(),gd->pageDict->count());
+    //printf("gd='%s': pageDict=%d\n",gd->name().data(),gd->pageDict->count());
     if (addToIndex)
     {
       Doxygen::indexList->addContentsItem(isDir,gd->groupTitle(),gd->getReference(),gd->getOutputFileBase(),0,isDir,TRUE);
@@ -4731,7 +4731,7 @@ static void writeIndex(OutputList &ol)
       ol.parseText(/*projPrefix+*/theTranslator->trExceptionIndex());
       ol.endIndexSection(isCompoundIndex);
     }
-    if (documentedFiles>0)
+    if (Config_getBool(SHOW_FILES) && (documentedFiles>0))
     {
       ol.startIndexSection(isFileIndex);
       ol.parseText(/*projPrefix+*/theTranslator->trFileIndex());

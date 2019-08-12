@@ -29,6 +29,8 @@
 #include "defargs.h"
 #include "outputgen.h"
 #include "dot.h"
+#include "dotclassgraph.h"
+#include "dotincldepgraph.h"
 #include "pagedef.h"
 #include "filename.h"
 #include "version.h"
@@ -152,7 +154,7 @@ static void writeXMLHeader(FTextStream &t)
   t << "<?xml version='1.0' encoding='UTF-8' standalone='no'?>" << endl;;
   t << "<doxygen xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" ";
   t << "xsi:noNamespaceSchemaLocation=\"compound.xsd\" ";
-  t << "version=\"" << versionString << "\">" << endl;
+  t << "version=\"" << getVersion() << "\">" << endl;
 }
 
 static void writeCombineScript()
@@ -566,7 +568,7 @@ static void generateXMLForMember(const MemberDef *md,FTextStream &ti,FTextStream
   {
     t << memberOutputFileBase(md);
   }
-  t << "_1"      // encoded `:' character (see util.cpp:convertNameToFile)
+  t << "_1"      // encoded ':' character (see util.cpp:convertNameToFile)
     << md->anchor();
   t << "\" prot=\"";
   switch(md->protection())
@@ -1407,14 +1409,14 @@ static void generateXMLForClass(const ClassDef *cd,FTextStream &ti)
   t << "    <detaileddescription>" << endl;
   writeXMLDocBlock(t,cd->docFile(),cd->docLine(),cd,0,cd->documentation());
   t << "    </detaileddescription>" << endl;
-  DotClassGraph inheritanceGraph(cd,DotNode::Inheritance);
+  DotClassGraph inheritanceGraph(cd,Inheritance);
   if (!inheritanceGraph.isTrivial())
   {
     t << "    <inheritancegraph>" << endl;
     inheritanceGraph.writeXML(t);
     t << "    </inheritancegraph>" << endl;
   }
-  DotClassGraph collaborationGraph(cd,DotNode::Collaboration);
+  DotClassGraph collaborationGraph(cd,Collaboration);
   if (!collaborationGraph.isTrivial())
   {
     t << "    <collaborationgraph>" << endl;
@@ -1979,7 +1981,7 @@ void generateXML()
   t << "<?xml version='1.0' encoding='UTF-8' standalone='no'?>" << endl;;
   t << "<doxygenindex xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" ";
   t << "xsi:noNamespaceSchemaLocation=\"index.xsd\" ";
-  t << "version=\"" << versionString << "\">" << endl;
+  t << "version=\"" << getVersion() << "\">" << endl;
 
   {
     ClassSDict::Iterator cli(*Doxygen::classSDict);

@@ -486,7 +486,7 @@ Entry* tcl_entry_new()
 //  myEntry->stat       = FALSE;
   myEntry->fileName   = tcl.file_name;
   myEntry->lang       = SrcLangExt_Tcl;
-  initGroupInfo(myEntry);
+  Doxygen::docGroup.initGroupInfo(myEntry);
   // collect entries
   if (!tcl.code)
   {
@@ -1049,7 +1049,7 @@ D
   tcl.string_commentcodify = "";
   tcl.string_commentline = "";
   tcl.line_body1=yylineno;
-  tcl_command(-1,"");
+  tcl_command(-1,yytext);
 }
 <COMMAND>{ws}*; {
 D
@@ -2274,21 +2274,22 @@ D
 }
 
 //! Handle \c namespace statements.
-static void tcl_command_NAMESPACE()
+static bool tcl_command_NAMESPACE()
 {
 D
   QCString myNs, myName, myStr;
   //Entry *myEntryNs=NULL;
   tcl_scan *myScan = tcl.scan.at(0);
 
+  tcl_name(myScan->ns,(*tcl.list_commandwords.at(4)),myNs,myName);
+  if (myName.isEmpty()) return false; // not a namespace
   tcl_codify_cmd("keyword",0);
   tcl_codify_cmd(NULL,1);
   tcl_codify_cmd("keyword",2);
   tcl_codify_cmd(NULL,3);
   tcl_codify_cmd(NULL,4);
   tcl_codify_cmd(NULL,5);
-  tcl_name(myScan->ns,(*tcl.list_commandwords.at(4)),myNs,myName);
-  if (myNs.length())
+  if (!myNs.isEmpty())
   {
     myName = myNs+"::"+myName;
   }
@@ -2310,6 +2311,7 @@ D
     tcl.word_is=' ';
   }
   myScan = tcl_scan_start(tcl.word_is,myStr, myName, NULL, NULL);
+  return true;
 }
 
 //! Handle \c itcl::class statements.
@@ -2636,11 +2638,16 @@ tcl_inf("->\n");
     if ((*tcl.list_commandwords.at(2))=="eval")
     {
       if (tcl.list_commandwords.count() < 7) {myLine=__LINE__;goto command_warn;}
-      tcl_command_NAMESPACE();
+      if (tcl_command_NAMESPACE())
+      {
+        goto command_end;
+      }
+    }
+    else
+    {
+      tcl_command_OTHER();
       goto command_end;
     }
-    tcl_command_OTHER();
-    goto command_end;
   }
   if (myStr=="itcl::class")
   {
@@ -2950,7 +2957,7 @@ tcl_inf("%s\n",fileName);
   printlex(yy_flex_debug, TRUE, __FILE__, fileName);
 
   msg("Parsing %s...\n",fileName);
-  groupEnterFile(fileName,yylineno);
+  Doxygen::docGroup.enterFile(fileName,yylineno);
 
   tcl_init();
   tcl.code = NULL;
@@ -2958,7 +2965,7 @@ tcl_inf("%s\n",fileName);
   tcl.this_parser = this;
   tcl.entry_main          = root; /* toplevel entry */
   tcl_parse("","");
-  groupLeaveFile(tcl.file_name,yylineno);
+  Doxygen::docGroup.leaveFile(tcl.file_name,yylineno);
   root->program.resize(0);
   myFile.close();
   printlex(yy_flex_debug, FALSE, __FILE__, fileName);

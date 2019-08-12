@@ -27,6 +27,11 @@
 #include "language.h"
 #include "version.h"
 #include "dot.h"
+#include "dotcallgraph.h"
+#include "dotclassgraph.h"
+#include "dotdirdeps.h"
+#include "dotgroupcollaboration.h"
+#include "dotincldepgraph.h"
 #include "pagedef.h"
 #include "docparser.h"
 #include "latexdocvisitor.h"
@@ -480,7 +485,7 @@ static void writeDefaultHeaderPart1(FTextStream &t)
   if (Config_getBool(LATEX_BATCHMODE))
     t << "\\batchmode\n";
 
-  // to overcome  problems wit too many open files
+  // to overcome problems with too many open files
   t << "\\let\\mypdfximage\\pdfximage"
        "\\def\\pdfximage{\\immediate\\mypdfximage}";
 
@@ -492,6 +497,14 @@ static void writeDefaultHeaderPart1(FTextStream &t)
     documentClass = "book";
   t << "\\documentclass[twoside]{" << documentClass << "}\n"
        "\n";
+  t << "%% moved from doxygen.sty due to workaround for LaTex 2019 version and unmaintained tabu package\n"
+       "\\usepackage{ifthen}\n"
+       "\\ifx\\requestedLaTeXdate\\undefined\n"
+       "\\usepackage{array}\n"
+       "\\else\n"
+       "\\usepackage{array}[=2016-10-06]\n"
+       "\\fi\n"
+       "%%\n";
 
   // Load required packages
   t << "% Packages required by doxygen\n"
@@ -763,7 +776,7 @@ static void writeDefaultHeaderPart3(FTextStream &t)
 {
   // part 3
   // Finalize project number
-  t << " Doxygen " << versionString << "}\\\\\n";
+  t << " Doxygen " << getVersion() << "}\\\\\n";
   if (Config_getBool(LATEX_TIMESTAMP))
     t << "\\vspace*{0.5cm}\n"
          "{\\small " << dateToString(TRUE) << "}\\\\\n";
@@ -832,7 +845,7 @@ static void writeDefaultFooter(FTextStream &t)
 void LatexGenerator::writeHeaderFile(QFile &f)
 {
   FTextStream t(&f);
-  t << "% Latex header for doxygen " << versionString << endl;
+  t << "% Latex header for doxygen " << getVersion() << endl;
   writeDefaultHeaderPart1(t);
   t << "Your title here";
   writeDefaultHeaderPart2(t);
@@ -843,14 +856,14 @@ void LatexGenerator::writeHeaderFile(QFile &f)
 void LatexGenerator::writeFooterFile(QFile &f)
 {
   FTextStream t(&f);
-  t << "% Latex footer for doxygen " << versionString << endl;
+  t << "% Latex footer for doxygen " << getVersion() << endl;
   writeDefaultFooter(t);
 }
 
 void LatexGenerator::writeStyleSheetFile(QFile &f)
 {
   FTextStream t(&f);
-  t << "% stylesheet for doxygen " << versionString << endl;
+  t << "% stylesheet for doxygen " << getVersion() << endl;
   writeDefaultStyleSheet(t);
 }
 
@@ -1324,6 +1337,15 @@ void LatexGenerator::writeStyleInfo(int part)
   startPlainFile("doxygen.sty");
   writeDefaultStyleSheet(t);
   endPlainFile();
+
+  // workaround for the problem caused by change in LaTeX in version 2019
+  // in the unmaintained tabu package
+  startPlainFile("tabu_doxygen.sty");
+  t << ResourceMgr::instance().getAsString("tabu_doxygen.sty");
+  endPlainFile();
+  startPlainFile("longtable_doxygen.sty");
+  t << ResourceMgr::instance().getAsString("longtable_doxygen.sty");
+  endPlainFile();
 }
 
 void LatexGenerator::newParagraph()
@@ -1376,7 +1398,7 @@ void LatexGenerator::startHtmlLink(const char *url)
   if (Config_getBool(PDF_HYPERLINKS))
   {
     t << "\\href{";
-    t << url;
+    t << latexFilterURL(url);
     t << "}";
   }
   t << "{\\texttt{ ";
@@ -2034,7 +2056,7 @@ void LatexGenerator::startDotGraph()
   newParagraph();
 }
 
-void LatexGenerator::endDotGraph(const DotClassGraph &g) 
+void LatexGenerator::endDotGraph(DotClassGraph &g) 
 {
   g.writeGraph(t,GOF_EPS,EOF_LaTeX,Config_getString(LATEX_OUTPUT),fileName,relPath);
 }
@@ -2043,7 +2065,7 @@ void LatexGenerator::startInclDepGraph()
 {
 }
 
-void LatexGenerator::endInclDepGraph(const DotInclDepGraph &g) 
+void LatexGenerator::endInclDepGraph(DotInclDepGraph &g) 
 {
   g.writeGraph(t,GOF_EPS,EOF_LaTeX,Config_getString(LATEX_OUTPUT),fileName,relPath);
 }
@@ -2052,7 +2074,7 @@ void LatexGenerator::startGroupCollaboration()
 {
 }
 
-void LatexGenerator::endGroupCollaboration(const DotGroupCollaboration &g) 
+void LatexGenerator::endGroupCollaboration(DotGroupCollaboration &g) 
 {
   g.writeGraph(t,GOF_EPS,EOF_LaTeX,Config_getString(LATEX_OUTPUT),fileName,relPath);
 }
@@ -2061,7 +2083,7 @@ void LatexGenerator::startCallGraph()
 {
 }
 
-void LatexGenerator::endCallGraph(const DotCallGraph &g) 
+void LatexGenerator::endCallGraph(DotCallGraph &g) 
 {
   g.writeGraph(t,GOF_EPS,EOF_LaTeX,Config_getString(LATEX_OUTPUT),fileName,relPath);
 }
@@ -2070,7 +2092,7 @@ void LatexGenerator::startDirDepGraph()
 {
 }
 
-void LatexGenerator::endDirDepGraph(const DotDirDeps &g) 
+void LatexGenerator::endDirDepGraph(DotDirDeps &g) 
 {
   g.writeGraph(t,GOF_EPS,EOF_LaTeX,Config_getString(LATEX_OUTPUT),fileName,relPath);
 }

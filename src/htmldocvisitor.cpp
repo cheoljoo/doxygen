@@ -263,6 +263,12 @@ static QCString htmlAttribsToString(const HtmlAttribList &attribs, QCString *pAl
         result+="=\""+convertToXML(att->value)+"\"";
       }
     }
+    else if (att->name=="nowrap") // In XHTML, attribute minimization is forbidden, and the nowrap attribute must be defined as <td nowrap="nowrap">.
+    {
+        result+=" ";
+        result+=att->name;
+        result+="=\"nowrap\"";
+    }
   }
   return result;
 }
@@ -403,8 +409,14 @@ void HtmlDocVisitor::visit(DocStyleChange *s)
     case DocStyleChange::Strike:
       if (s->enable()) m_t << "<strike" << htmlAttribsToString(s->attribs()) << ">";      else m_t << "</strike>";
       break;
+    case DocStyleChange::Del:
+      if (s->enable()) m_t << "<del" << htmlAttribsToString(s->attribs()) << ">";      else m_t << "</del>";
+      break;
     case DocStyleChange::Underline:
       if (s->enable()) m_t << "<u" << htmlAttribsToString(s->attribs()) << ">";      else m_t << "</u>";
+      break;
+    case DocStyleChange::Ins:
+      if (s->enable()) m_t << "<ins" << htmlAttribsToString(s->attribs()) << ">";      else m_t << "</ins>";
       break;
     case DocStyleChange::Italic:
       if (s->enable()) m_t << "<em" << htmlAttribsToString(s->attribs()) << ">";     else m_t << "</em>";
@@ -775,7 +787,7 @@ void HtmlDocVisitor::visit(DocInclude *inc)
 
 void HtmlDocVisitor::visit(DocIncOperator *op)
 {
-  //printf("DocIncOperator: type=%d first=%d, last=%d text=`%s'\n",
+  //printf("DocIncOperator: type=%d first=%d, last=%d text='%s'\n",
   //    op->type(),op->isFirst(),op->isLast(),op->text().data());
   if (op->isFirst()) 
   {
@@ -784,7 +796,9 @@ void HtmlDocVisitor::visit(DocIncOperator *op)
     pushEnabled();
     m_hide=TRUE;
   }
-  SrcLangExt langExt = getLanguageFromFileName(m_langExt);
+  QCString locLangExt = getFileNameExtension(op->includeFileName());
+  if (locLangExt.isEmpty()) locLangExt = m_langExt;
+  SrcLangExt langExt = getLanguageFromFileName(locLangExt);
   if (op->type()!=DocIncOperator::Skip) 
   {
     popEnabled();
@@ -796,7 +810,7 @@ void HtmlDocVisitor::visit(DocIncOperator *op)
         QFileInfo cfi( op->includeFileName() );
         fd = createFileDef( cfi.dirPath().utf8(), cfi.fileName().utf8() );
       }
-      Doxygen::parserManager->getParser(m_langExt)
+      Doxygen::parserManager->getParser(locLangExt)
                             ->parseCode(
                                 m_ci,
                                 op->context(),
@@ -2028,10 +2042,8 @@ void HtmlDocVisitor::visitPre(DocParamList *pl)
     m_t << "<td class=\"paramtype\">";
     QListIterator<DocNode> li(pl->paramTypes());
     DocNode *type;
-    bool first=TRUE;
     for (li.toFirst();(type=li.current());++li)
     {
-      if (!first) m_t << "&#160;|&#160;"; else first=FALSE;
       if (type->kind()==DocNode::Kind_Word)
       {
         visit((DocWord*)type); 
@@ -2039,6 +2051,10 @@ void HtmlDocVisitor::visitPre(DocParamList *pl)
       else if (type->kind()==DocNode::Kind_LinkedWord)
       {
         visit((DocLinkedWord*)type); 
+      }
+      else if (type->kind()==DocNode::Kind_Sep)
+      {
+        m_t << "&#160;" << ((DocSeparator *)type)->chars() << "&#160;";
       }
     }
     m_t << "</td>";
@@ -2114,14 +2130,6 @@ void HtmlDocVisitor::visitPost(DocInternalRef *)
   if (m_hide) return;
   endLink();
   m_t << " ";
-}
-
-void HtmlDocVisitor::visitPre(DocCopy *)
-{
-}
-
-void HtmlDocVisitor::visitPost(DocCopy *)
-{
 }
 
 void HtmlDocVisitor::visitPre(DocText *)

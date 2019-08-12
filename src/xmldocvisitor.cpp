@@ -190,8 +190,14 @@ void XmlDocVisitor::visit(DocStyleChange *s)
     case DocStyleChange::Strike:
       if (s->enable()) m_t << "<strike>";      else m_t << "</strike>";
       break;
+    case DocStyleChange::Del:
+      if (s->enable()) m_t << "<del>";      else m_t << "</del>";
+      break;
     case DocStyleChange::Underline:
       if (s->enable()) m_t << "<underline>";      else m_t << "</underline>";
+      break;
+    case DocStyleChange::Ins:
+      if (s->enable()) m_t << "<ins>";      else m_t << "</ins>";
       break;
     case DocStyleChange::Italic:
       if (s->enable()) m_t << "<emphasis>";     else m_t << "</emphasis>";
@@ -404,7 +410,7 @@ void XmlDocVisitor::visit(DocInclude *inc)
 
 void XmlDocVisitor::visit(DocIncOperator *op)
 {
-  //printf("DocIncOperator: type=%d first=%d, last=%d text=`%s'\n",
+  //printf("DocIncOperator: type=%d first=%d, last=%d text='%s'\n",
   //    op->type(),op->isFirst(),op->isLast(),op->text().data());
   if (op->isFirst()) 
   {
@@ -415,20 +421,22 @@ void XmlDocVisitor::visit(DocIncOperator *op)
     pushEnabled();
     m_hide = TRUE;
   }
-  SrcLangExt langExt = getLanguageFromFileName(m_langExt);
+  QCString locLangExt = getFileNameExtension(op->includeFileName());
+  if (locLangExt.isEmpty()) locLangExt = m_langExt;
+  SrcLangExt langExt = getLanguageFromFileName(locLangExt);
   if (op->type()!=DocIncOperator::Skip) 
   {
     popEnabled();
     if (!m_hide) 
     {
-      FileDef *fd;
+      FileDef *fd = 0;
       if (!op->includeFileName().isEmpty())
       {
         QFileInfo cfi( op->includeFileName() );
         fd = createFileDef( cfi.dirPath().utf8(), cfi.fileName().utf8() );
       }
 
-      Doxygen::parserManager->getParser(m_langExt)
+      Doxygen::parserManager->getParser(locLangExt)
                             ->parseCode(m_ci,op->context(),
                                         op->text(),langExt,op->isExample(),
                                         op->exampleFile(),
@@ -990,9 +998,9 @@ void XmlDocVisitor::visitPre(DocParamList *pl)
     {
       QListIterator<DocNode> li(pl->paramTypes());
       DocNode *type;
+      m_t << "<parametertype>";
       for (li.toFirst();(type=li.current());++li)
       {
-        m_t << "<parametertype>";
         if (type->kind()==DocNode::Kind_Word)
         {
           visit((DocWord*)type); 
@@ -1001,8 +1009,13 @@ void XmlDocVisitor::visitPre(DocParamList *pl)
         {
           visit((DocLinkedWord*)type); 
         }
-        m_t << "</parametertype>" << endl;
+        else if (type->kind()==DocNode::Kind_Sep)
+        {
+          m_t << "</parametertype>" << endl;
+          m_t << "<parametertype>";
+        }
       }
+      m_t << "</parametertype>" << endl;
     }
     m_t << "<parametername";
     if (pl->direction()!=DocParamSect::Unspecified)
@@ -1076,18 +1089,6 @@ void XmlDocVisitor::visitPost(DocInternalRef *)
   if (m_hide) return;
   endLink();
   m_t << " ";
-}
-
-void XmlDocVisitor::visitPre(DocCopy *c)
-{
-  if (m_hide) return;
-  m_t << "<copydoc link=\"" << convertToXML(c->link()) << "\">";
-}
-
-void XmlDocVisitor::visitPost(DocCopy *)
-{
-  if (m_hide) return;
-  m_t << "</copydoc>" << endl;
 }
 
 void XmlDocVisitor::visitPre(DocText *)

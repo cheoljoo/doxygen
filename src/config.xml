@@ -478,6 +478,17 @@ Go to the <a href="commands.html">next</a> section or return to the
 ]]>
       </docs>
     </option>
+    <option type='bool' id='JAVADOC_BANNER' defval='0'>
+      <docs>
+<![CDATA[
+  If the \c JAVADOC_BANNER tag is set to \c YES then doxygen
+  will interpret a line such as \verbatim /***************\endverbatim as being the
+  beginning of a Javadoc-style comment "banner". If set to \c NO, the
+  Javadoc-style will behave just like regular comments and it will
+  not be interpreted by doxygen.
+]]>
+      </docs>
+    </option>
     <option type='bool' id='QT_AUTOBRIEF' defval='0'>
       <docs>
 <![CDATA[
@@ -949,8 +960,8 @@ Go to the <a href="commands.html">next</a> section or return to the
  will only generate file names in lower-case letters. If set to
  \c YES, upper-case letters are also allowed. This is useful if you have
  classes or files whose names only differ in case and if your file system
- supports case sensitive file names. Windows and Mac users are advised to set this
- option to \c NO.
+ supports case sensitive file names. Windows (including Cygwin) ands
+ Mac users are advised to set this option to \c NO.
 ]]>
       </docs>
     </option>
@@ -2208,7 +2219,7 @@ The \c DOCSET_PUBLISHER_NAME tag identifies the documentation publisher.
 <![CDATA[
  The \c QHP_NAMESPACE tag specifies the namespace to use when generating
  Qt Help Project output. For more information please see
- <a href="http://doc.qt.io/archives/qt-4.8/qthelpproject.html#namespace">Qt Help Project / Namespace</a>.
+ <a href="https://doc.qt.io/archives/qt-4.8/qthelpproject.html#namespace">Qt Help Project / Namespace</a>.
 ]]>
       </docs>
     </option>
@@ -2217,7 +2228,7 @@ The \c DOCSET_PUBLISHER_NAME tag identifies the documentation publisher.
 <![CDATA[
  The \c QHP_VIRTUAL_FOLDER tag specifies the namespace to use when
  generating Qt Help Project output. For more information please see
- <a href="http://doc.qt.io/archives/qt-4.8/qthelpproject.html#virtual-folders">Qt Help Project / Virtual Folders</a>.
+ <a href="https://doc.qt.io/archives/qt-4.8/qthelpproject.html#virtual-folders">Qt Help Project / Virtual Folders</a>.
 ]]>
       </docs>
     </option>
@@ -2225,7 +2236,7 @@ The \c DOCSET_PUBLISHER_NAME tag identifies the documentation publisher.
       <docs>
 <![CDATA[
   If the \c QHP_CUST_FILTER_NAME tag is set, it specifies the name of a custom filter to add. For more information please see
-  <a href="http://doc.qt.io/archives/qt-4.8/qthelpproject.html#custom-filters">Qt Help Project / Custom Filters</a>.
+  <a href="https://doc.qt.io/archives/qt-4.8/qthelpproject.html#custom-filters">Qt Help Project / Custom Filters</a>.
 ]]>
       </docs>
     </option>
@@ -2234,7 +2245,7 @@ The \c DOCSET_PUBLISHER_NAME tag identifies the documentation publisher.
 <![CDATA[
   The \c QHP_CUST_FILTER_ATTRS tag specifies the list of the attributes of the custom filter to add.
   For more information please see
-  <a href="http://doc.qt.io/archives/qt-4.8/qthelpproject.html#custom-filters">Qt Help Project / Custom Filters</a>.
+  <a href="https://doc.qt.io/archives/qt-4.8/qthelpproject.html#custom-filters">Qt Help Project / Custom Filters</a>.
 ]]>
       </docs>
     </option>
@@ -2242,7 +2253,7 @@ The \c DOCSET_PUBLISHER_NAME tag identifies the documentation publisher.
       <docs>
 <![CDATA[
   The \c QHP_SECT_FILTER_ATTRS tag specifies the list of the attributes this project's filter section matches.
-  <a href="http://doc.qt.io/archives/qt-4.8/qthelpproject.html#filter-attributes">Qt Help Project / Filter Attributes</a>.
+  <a href="https://doc.qt.io/archives/qt-4.8/qthelpproject.html#filter-attributes">Qt Help Project / Filter Attributes</a>.
 ]]>
       </docs>
     </option>
@@ -3240,17 +3251,6 @@ where `loc1` and `loc2` can be relative or absolute paths or URLs.
 ]]>
       </docs>
     </option>
-    <option type='string' id='MSCGEN_PATH' format='dir' defval=''>
-      <docs>
-<![CDATA[
- You can define message sequence charts within doxygen comments using the \ref cmdmsc "\\msc"
- command. Doxygen will then run the <a href="http://www.mcternan.me.uk/mscgen/">mscgen tool</a>) to
- produce the chart and insert it in the documentation. The <code>MSCGEN_PATH</code> tag allows you to
- specify the directory where the \c mscgen tool resides. If left empty the tool is assumed to
- be found in the default search path.
-]]>
-      </docs>
-    </option>
     <option type='string' id='DIA_PATH' format='dir' defval=''>
       <docs>
 <![CDATA[
@@ -3630,5 +3630,6 @@ remove the intermediate dot files that are used to generate the various graphs.
     <option type='obsolete' id='XML_SCHEMA'/>
     <option type='obsolete' id='XML_DTD'/>
     <option type='obsolete' id='PERL_PATH'/>
+    <option type='obsolete' id='MSCGEN_PATH'/>
   </group>
 </doxygenconfig>

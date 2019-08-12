@@ -18,6 +18,7 @@
 #ifndef OUTPUTLIST_H
 #define OUTPUTLIST_H
 
+#include <utility>
 #include <qlist.h>
 #include "index.h" // for IndexSections
 #include "outputgen.h"
@@ -74,13 +75,12 @@ class OutputList : public OutputDocInterface
     // OutputDocInterface implementation
     //////////////////////////////////////////////////
 
-    bool generateDoc(const char *fileName,int startLine,
+    void generateDoc(const char *fileName,int startLine,
                      const Definition *ctx,const MemberDef *md,const QCString &docStr,
                      bool indexWords,bool isExample,const char *exampleName=0,
                      bool singleLine=FALSE,bool linkFromIndex=FALSE);
     void writeDoc(DocRoot *root,const Definition *ctx,const MemberDef *md);
-    bool parseText(const QCString &textStr);
-    
+    void parseText(const QCString &textStr);
 
     void startIndexSection(IndexSections is)
     { forall(&OutputGenerator::startIndexSection,is); }
@@ -110,8 +110,6 @@ class OutputList : public OutputDocInterface
     { forall(&OutputGenerator::startTitle); }
     void endTitle() 
     { forall(&OutputGenerator::endTitle); }
-    //void newParagraph() 
-    //{ forall(&OutputGenerator::newParagraph); }
     void startParagraph(const char *classDef=0)
     { forall(&OutputGenerator::startParagraph,classDef); }
     void endParagraph() 
@@ -177,8 +175,6 @@ class OutputList : public OutputDocInterface
     { forall(&OutputGenerator::startGroupHeader,extraLevels); }
     void endGroupHeader(int extraLevels=0)
     { forall(&OutputGenerator::endGroupHeader,extraLevels); }
-    //void writeListItem() 
-    //{ forall(&OutputGenerator::writeListItem); }
     void startItemListItem() 
     { forall(&OutputGenerator::startItemListItem); }
     void endItemListItem() 
@@ -391,25 +387,25 @@ class OutputList : public OutputDocInterface
     { forall(&OutputGenerator::endDescTableData); }
     void startDotGraph()
     { forall(&OutputGenerator::startDotGraph); }
-    void endDotGraph(const DotClassGraph &g)
+    void endDotGraph(DotClassGraph &g)
     { forall(&OutputGenerator::endDotGraph,g); }
     void startInclDepGraph()
     { forall(&OutputGenerator::startInclDepGraph); }
-    void endInclDepGraph(const DotInclDepGraph &g)
+    void endInclDepGraph(DotInclDepGraph &g)
     { forall(&OutputGenerator::endInclDepGraph,g); }
     void startCallGraph()
     { forall(&OutputGenerator::startCallGraph); }
-    void endCallGraph(const DotCallGraph &g)
+    void endCallGraph(DotCallGraph &g)
     { forall(&OutputGenerator::endCallGraph,g); }
     void startDirDepGraph()
     { forall(&OutputGenerator::startDirDepGraph); }
-    void endDirDepGraph(const DotDirDeps &g)
+    void endDirDepGraph(DotDirDeps &g)
     { forall(&OutputGenerator::endDirDepGraph,g); }
     void startGroupCollaboration()
     { forall(&OutputGenerator::startGroupCollaboration); }
-    void endGroupCollaboration(const DotGroupCollaboration &g)
+    void endGroupCollaboration(DotGroupCollaboration &g)
     { forall(&OutputGenerator::endGroupCollaboration,g); }
-    void writeGraphicalHierarchy(const DotGfxHierarchyTable &g)
+    void writeGraphicalHierarchy(DotGfxHierarchyTable &g)
     { forall(&OutputGenerator::writeGraphicalHierarchy,g); }
     void startTextBlock(bool dense=FALSE)
     { forall(&OutputGenerator::startTextBlock,dense); }
@@ -493,70 +489,28 @@ class OutputList : public OutputDocInterface
     { forall(&OutputGenerator::addWord,word,hiPriority); }
 
     void startPlainFile(const char *name)
-    {
-      QListIterator<OutputGenerator> it(m_outputs);
-      OutputGenerator *og;
-      for (;(og=it.current());++it)
-      {
-        if (og->isEnabled()) (og->startPlainFile)(name);
-      }
-    }
+    { forall(&OutputGenerator::startPlainFile,name); }
     void endPlainFile()
-    {
-      QListIterator<OutputGenerator> it(m_outputs);
-      OutputGenerator *og;
-      for (;(og=it.current());++it)
-      {
-        if (og->isEnabled()) (og->endPlainFile)();
-      }
-    }
+    { forall(&OutputGenerator::endPlainFile); }
 
   private:
     void debug();
     void clear();
 
-    void forall(void (OutputGenerator::*func)());
-    FORALLPROTO1(const char *);
-    FORALLPROTO1(char);
-    FORALLPROTO1(IndexSections);
-    FORALLPROTO1(int);
-    FORALLPROTO1(const DotClassGraph &);
-    FORALLPROTO1(const DotInclDepGraph &);
-    FORALLPROTO1(const DotCallGraph &);
-    FORALLPROTO1(const DotGroupCollaboration &);
-    FORALLPROTO1(const DotDirDeps &);
-    FORALLPROTO1(const DotGfxHierarchyTable &);
-    FORALLPROTO1(SectionTypes);
-#if defined(HAS_BOOL_TYPE) || defined(Q_HAS_BOOL_TYPE)
-    FORALLPROTO1(bool);
-    FORALLPROTO2(bool,int);
-    FORALLPROTO2(bool,bool);
-    FORALLPROTO2(const char *,bool);
-    FORALLPROTO4(const char *,const char *,const char *,int);
-#endif
-    FORALLPROTO2(int,bool);
-    FORALLPROTO2(bool,const char *);
-    FORALLPROTO2(ParamListTypes,const char *);
-    FORALLPROTO2(const char *,const char *);
-    FORALLPROTO2(const char *,int);
-    FORALLPROTO2(const char *,SectionInfo::SectionType);
-    FORALLPROTO3(bool,HighlightedItem,const char *);
-    FORALLPROTO3(bool,bool,bool);
-    FORALLPROTO3(const char *,const char *,bool);
-    FORALLPROTO3(const char *,int,const char *);
-    FORALLPROTO3(const char *,const char *,SectionInfo::SectionType);
-    FORALLPROTO3(uchar,uchar,uchar);
-    FORALLPROTO3(const char *,const char *,const char *);
-    FORALLPROTO3(const ClassDiagram &,const char *,const char *);
-    FORALLPROTO3(const Definition*,const char *,bool);
-    FORALLPROTO4(SectionTypes,const char *,const char *,const char *);
-    FORALLPROTO4(const char *,const char *,const char *,const char *);
-    FORALLPROTO4(const char *,const char *,const char *,bool);
-    FORALLPROTO5(const char *,const char *,const char *,const char *,const char *);
-    FORALLPROTO5(const char *,const char *,const char *,const char *,bool);
-    FORALLPROTO6(const char *,const char *,const char *,const char *,const char *,const char *);
-    FORALLPROTO6(const char *,const DocLinkInfo &,const char *,const char *,const SourceLinkInfo &,const SourceLinkInfo &);
-    FORALLPROTO7(const char *,const char *,const char *,const char *,int,int,bool);
+    // For each output format that is enabled (OutputGenerator::isEnabled()) we forward
+    // the method call.
+    // We use C++11 variadic templates and perfect forwarding to implement forall() generically,
+    // and split the types of the methods from the arguments passed to allow implicit conversions.
+    template<typename T,class... Ts,class... As>
+    void forall(void (T::*methodPtr)(Ts...),As&&... args)
+    {
+      QListIterator<OutputGenerator> li(m_outputs);
+      OutputGenerator *og;
+      for (li.toFirst();(og=li.current());++li)
+      {
+        if (og->isEnabled()) (og->*methodPtr)(std::forward<As>(args)...);
+      }
+    }
 
     OutputList(const OutputList &ol);
     QList<OutputGenerator> m_outputs;

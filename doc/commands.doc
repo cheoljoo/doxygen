@@ -849,7 +849,7 @@ Structural indicators
   This command turns a comment block into a header
   definition of a member group. The
   comment block should be followed by a
-  <code>//\@{ ... //\@}</code> block containing the
+  <code>///\@{ ... ///\@}</code> block containing the
   members of the group.
 
   See section \ref memgroup for an example.
@@ -2783,9 +2783,9 @@ See also the \ref emojisup "emoji support page" for details.
 
   \note The text fragment should only include the part of the message
   sequence chart that is
-  within the <code>msc {...}</code> block.
-  \note You need to install the <code>mscgen</code> tool, if you want to use this
-  command.
+  within the <code>msc {...}</code> block (this is different from 
+  \ref cmdmscfile "\\mscfile").
+  \note mscgen is now built in into doxygen
 
 Here is an example of the use of the \c \\msc command.
 \code
@@ -2923,7 +2923,7 @@ class Receiver
   The first argument specifies the file name of the image.
   doxygen will look for files in the paths (or files) that you specified
   after the \ref cfg_mscfile_dirs "MSCFILE_DIRS" tag.
-  If the msc file is found it will be used as an input file to the mscgen tool.
+  If the msc file is found it will be used as an input file to the built in mscgen tool.
   The resulting image will be put into the correct output directory.
   If the msc file name contains spaces you'll have to put quotes ("...") around it.
 
@@ -2937,6 +2937,10 @@ class Receiver
   For a description of the possibilities see the paragraph
   \ref image_sizeindicator "Size indication" with the
   \ref cmdimage "\\image" command.
+
+  \note The text fragment should include the part message of the
+  sequence chart as well as the starting `msc {` and ending `}`
+  (this is different from \ref cmdmsc "\\msc").
 
   \sa section \ref cmdmsc "\\msc".
 

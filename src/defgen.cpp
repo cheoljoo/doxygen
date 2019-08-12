@@ -27,6 +27,7 @@
 #include "defargs.h"
 #include "outputgen.h"
 #include "dot.h"
+#include "dotclassgraph.h"
 #include "arguments.h"
 #include "memberlist.h"
 #include "namespacedef.h"
@@ -262,7 +263,7 @@ void generateDEFForMember(MemberDef *md,
         t << memPrefix << "referenceto = {" << endl;
         t << refPrefix << "id = '"
           << rmd->getBodyDef()->getOutputFileBase()
-          << "_1"   // encoded `:' character (see util.cpp:convertNameToFile)
+          << "_1"   // encoded ':' character (see util.cpp:convertNameToFile)
           << rmd->anchor() << "';" << endl;
 
         t << refPrefix << "line = '"
@@ -295,7 +296,7 @@ void generateDEFForMember(MemberDef *md,
         t << memPrefix << "referenceby = {" << endl;
         t << refPrefix << "id = '"
           << rmd->getBodyDef()->getOutputFileBase()
-          << "_1"   // encoded `:' character (see util.cpp:convertNameToFile)
+          << "_1"   // encoded ':' character (see util.cpp:convertNameToFile)
           << rmd->anchor() << "';" << endl;
 
         t << refPrefix << "line = '"
@@ -466,14 +467,14 @@ void generateDEFForClass(ClassDef *cd,FTextStream &t)
   t << "  cp-documentation = <<_EnD_oF_dEf_TeXt_" << endl
     << cd->documentation() << endl << "_EnD_oF_dEf_TeXt_;" << endl;
 
-  DotClassGraph inheritanceGraph(cd,DotNode::Inheritance);
+  DotClassGraph inheritanceGraph(cd,Inheritance);
   if (!inheritanceGraph.isTrivial())
   {
     t << "  cp-inheritancegraph = <<_EnD_oF_dEf_TeXt_" << endl;
     inheritanceGraph.writeDEF(t);
     t << endl << "_EnD_oF_dEf_TeXt_;" << endl;
   }
-  DotClassGraph collaborationGraph(cd,DotNode::Collaboration);
+  DotClassGraph collaborationGraph(cd,Collaboration);
   if (!collaborationGraph.isTrivial())
   {
     t << "  cp-collaborationgraph = <<_EnD_oF_dEf_TeXt_" << endl;
@@ -576,13 +577,13 @@ void generateDEF()
       dir.setPath(QDir::currentDirPath());
       if (!dir.mkdir(outputDirectory))
       {
-        err("tag OUTPUT_DIRECTORY: Output directory `%s' does not "
+        err("tag OUTPUT_DIRECTORY: Output directory '%s' does not "
             "exist and cannot be created\n",outputDirectory.data());
         exit(1);
       }
       else
       {
-        msg("Notice: Output directory `%s' does not exist. "
+        msg("Notice: Output directory '%s' does not exist. "
             "I have created it for you.\n", outputDirectory.data());
       }
       dir.cd(outputDirectory);

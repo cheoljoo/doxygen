@@ -292,9 +292,11 @@ void LatexDocVisitor::visit(DocStyleChange *s)
       if (s->enable()) m_t << "{\\bfseries{";      else m_t << "}}";
       break;
     case DocStyleChange::Strike:
+    case DocStyleChange::Del:
       if (s->enable()) m_t << "\\sout{";     else m_t << "}";
       break;
     case DocStyleChange::Underline:
+    case DocStyleChange::Ins:
       if (s->enable()) m_t << "\\uline{";     else m_t << "}";
       break;
     case DocStyleChange::Italic:
@@ -557,7 +559,7 @@ void LatexDocVisitor::visit(DocInclude *inc)
 
 void LatexDocVisitor::visit(DocIncOperator *op)
 {
-  //printf("DocIncOperator: type=%d first=%d, last=%d text=`%s'\n",
+  //printf("DocIncOperator: type=%d first=%d, last=%d text='%s'\n",
   //    op->type(),op->isFirst(),op->isLast(),op->text().data());
   if (op->isFirst()) 
   {
@@ -566,20 +568,22 @@ void LatexDocVisitor::visit(DocIncOperator *op)
     pushEnabled();
     m_hide = TRUE;
   }
-  SrcLangExt langExt = getLanguageFromFileName(m_langExt);
+  QCString locLangExt = getFileNameExtension(op->includeFileName());
+  if (locLangExt.isEmpty()) locLangExt = m_langExt;
+  SrcLangExt langExt = getLanguageFromFileName(locLangExt);
   if (op->type()!=DocIncOperator::Skip) 
   {
     popEnabled();
     if (!m_hide) 
     {
-      FileDef *fd;
+      FileDef *fd = 0;
       if (!op->includeFileName().isEmpty())
       {
         QFileInfo cfi( op->includeFileName() );
         fd = createFileDef( cfi.dirPath().utf8(), cfi.fileName().utf8() );
       }
 
-      Doxygen::parserManager->getParser(m_langExt)
+      Doxygen::parserManager->getParser(locLangExt)
                             ->parseCode(m_ci,op->context(),op->text(),langExt,
                                         op->isExample(),op->exampleFile(),
                                         fd,     // fileDef
@@ -1584,10 +1588,8 @@ void LatexDocVisitor::visitPre(DocParamList *pl)
   {
     QListIterator<DocNode> li(pl->paramTypes());
     DocNode *type;
-    bool first=TRUE;
     for (li.toFirst();(type=li.current());++li)
     {
-      if (!first) m_t << " | "; else first=FALSE;
       if (type->kind()==DocNode::Kind_Word)
       {
         visit((DocWord*)type); 
@@ -1595,6 +1597,10 @@ void LatexDocVisitor::visitPre(DocParamList *pl)
       else if (type->kind()==DocNode::Kind_LinkedWord)
       {
         visit((DocLinkedWord*)type); 
+      }
+      else if (type->kind()==DocNode::Kind_Sep)
+      {
+        m_t << " " << ((DocSeparator *)type)->chars() << " ";
       }
     }
     if (useTable) m_t << " & ";
@@ -1694,14 +1700,6 @@ void LatexDocVisitor::visitPost(DocInternalRef *ref)
 {
   if (m_hide) return;
   endLink(0,ref->file(),ref->anchor());
-}
-
-void LatexDocVisitor::visitPre(DocCopy *)
-{
-}
-
-void LatexDocVisitor::visitPost(DocCopy *)
-{
 }
 
 void LatexDocVisitor::visitPre(DocText *)

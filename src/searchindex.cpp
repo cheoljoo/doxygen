@@ -956,6 +956,7 @@ void createJavascriptSearchIndex()
 void writeJavascriptSearchIndex()
 {
   int i;
+  int cnt = 0;
   // write index files
   QCString searchDirName = Config_getString(HTML_OUTPUT)+"/search";
 
@@ -983,7 +984,7 @@ void writeJavascriptSearchIndex()
             " \"https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">" << endl;
           t << "<html><head><title></title>" << endl;
           t << "<meta http-equiv=\"Content-Type\" content=\"text/xhtml;charset=UTF-8\"/>" << endl;
-          t << "<meta name=\"generator\" content=\"Doxygen " << versionString << "\"/>" << endl;
+          t << "<meta name=\"generator\" content=\"Doxygen " << getVersion() << "\"/>" << endl;
           t << "<link rel=\"stylesheet\" type=\"text/css\" href=\"search.css\"/>" << endl;
           t << "<script type=\"text/javascript\" src=\"" << baseName << ".js\"></script>" << endl;
           t << "<script type=\"text/javascript\" src=\"search.js\"></script>" << endl;
@@ -1043,7 +1044,7 @@ void writeJavascriptSearchIndex()
           }
           firstEntry=FALSE;
 
-          ti << "  ['" << dl->id() << "',['" << convertToXML(dl->name()) << "',[";
+          ti << "  ['" << dl->id() << "_" << cnt++ << "',['" << convertToXML(dl->name()) << "',[";
 
           if (dl->count()==1) // item with a unique name
           {

@@ -33,6 +33,7 @@
 #include "defargs.h"
 #include "docparser.h"
 #include "dot.h"
+#include "dotcallgraph.h"
 #include "searchindex.h"
 #include "parserintf.h"
 #include "objcache.h"
@@ -173,6 +174,7 @@ class MemberDefImpl : public DefinitionImpl, public MemberDef
     virtual bool livesInsideEnum() const;
     virtual bool isSliceLocal() const;
     virtual bool isConstExpr() const;
+    virtual int  numberOfFlowKeyWords() const;
     virtual bool isFriendToHide() const;
     virtual bool isNotFriend() const;
     virtual bool isFunctionOrSignalSlot() const;
@@ -219,7 +221,7 @@ class MemberDefImpl : public DefinitionImpl, public MemberDef
     virtual QCString getScopeString() const;
     virtual ClassDef *getClassDefOfAnonymousType() const;
     virtual bool isTypedefValCached() const;
-    virtual ClassDef *getCachedTypedefVal() const;
+    virtual const ClassDef *getCachedTypedefVal() const;
     virtual QCString getCachedTypedefTemplSpec() const;
     virtual QCString getCachedResolvedTypedef() const;
     virtual MemberDef *memberDefinition() const;
@@ -294,7 +296,7 @@ class MemberDefImpl : public DefinitionImpl, public MemberDef
     virtual void addListReference(Definition *d);
     virtual void setDocsForDefinition(bool b);
     virtual void setGroupAlias(const MemberDef *md);
-    virtual void cacheTypedefVal(ClassDef *val,const QCString &templSpec,const QCString &resolvedType);
+    virtual void cacheTypedefVal(const ClassDef *val,const QCString &templSpec,const QCString &resolvedType);
     virtual void invalidateTypedefValCache();
     virtual void invalidateCachedArgumentTypes();
     virtual void setMemberDefinition(MemberDef *md);
@@ -307,6 +309,7 @@ class MemberDefImpl : public DefinitionImpl, public MemberDef
     virtual void setBriefDescription(const char *b,const char *briefFile,int briefLine);
     virtual void setInbodyDocumentation(const char *d,const char *inbodyFile,int inbodyLine);
     virtual void setHidden(bool b);
+    virtual void incrementFlowKeyWordCount();
     virtual void writeDeclaration(OutputList &ol,
                    const ClassDef *cd,const NamespaceDef *nd,const FileDef *fd,const GroupDef *gd,
                    bool inGroup, const ClassDef *inheritFrom=0,const char *inheritId=0) const;
@@ -604,6 +607,8 @@ class MemberDefAliasImpl : public DefinitionAliasImpl, public MemberDef
     { return getMdAlias()->isSliceLocal(); }
     virtual bool isConstExpr() const
     { return getMdAlias()->isConstExpr(); }
+    virtual int  numberOfFlowKeyWords() const
+    { return getMdAlias()->numberOfFlowKeyWords(); }
     virtual bool isFriendToHide() const
     { return getMdAlias()->isFriendToHide(); }
     virtual bool isNotFriend() const
@@ -692,7 +697,7 @@ class MemberDefAliasImpl : public DefinitionAliasImpl, public MemberDef
     { return getMdAlias()->getClassDefOfAnonymousType(); }
     virtual bool isTypedefValCached() const
     { return getMdAlias()->isTypedefValCached(); }
-    virtual ClassDef *getCachedTypedefVal() const
+    virtual const ClassDef *getCachedTypedefVal() const
     { return getMdAlias()->getCachedTypedefVal(); }
     virtual QCString getCachedTypedefTemplSpec() const
     { return getMdAlias()->getCachedTypedefTemplSpec(); }
@@ -801,7 +806,7 @@ class MemberDefAliasImpl : public DefinitionAliasImpl, public MemberDef
     virtual void addListReference(Definition *d) {}
     virtual void setDocsForDefinition(bool b) {}
     virtual void setGroupAlias(const MemberDef *md) {}
-    virtual void cacheTypedefVal(ClassDef *val,const QCString &templSpec,const QCString &resolvedType) {}
+    virtual void cacheTypedefVal(const ClassDef *val,const QCString &templSpec,const QCString &resolvedType) {}
     virtual void invalidateTypedefValCache() {}
     virtual void invalidateCachedArgumentTypes() {}
     virtual void setMemberDefinition(MemberDef *md) {}
@@ -819,6 +824,7 @@ class MemberDefAliasImpl : public DefinitionAliasImpl, public MemberDef
     virtual MemberDef *createTemplateInstanceMember(ArgumentList *formalArgs,
                ArgumentList *actualArgs) const
     { return getMdAlias()->createTemplateInstanceMember(formalArgs,actualArgs); }
+    virtual void incrementFlowKeyWordCount() {}
 
     virtual void writeDeclaration(OutputList &ol,
                    const ClassDef *cd,const NamespaceDef *nd,const FileDef *fd,const GroupDef *gd,
@@ -928,7 +934,7 @@ static bool writeDefArgumentList(OutputList &ol,const Definition *scope,const Me
 {
   const ArgumentList *defArgList=(md->isDocsForDefinition()) ?
                              md->argumentList() : md->declArgumentList();
-  //printf("writeDefArgumentList `%s' isDocsForDefinition()=%d\n",md->name().data(),md->isDocsForDefinition());
+  //printf("writeDefArgumentList '%s' isDocsForDefinition()=%d\n",md->name().data(),md->isDocsForDefinition());
   if (defArgList==0 || md->isProperty())
   {
     return FALSE; // member has no function like argument list
@@ -1042,7 +1048,7 @@ static bool writeDefArgumentList(OutputList &ol,const Definition *scope,const Me
     }
     if (hasFuncPtrType) // argument type is a function pointer
     {
-      //printf("a->type=`%s' a->name=`%s'\n",a->type.data(),a->name.data());
+      //printf("a->type='%s' a->name='%s'\n",a->type.data(),a->name.data());
       QCString n=a->type.left(vp);
       if (hasFuncPtrType) n=a->type.left(wp);
       if (md->isObjCMethod()) { n.prepend("("); n.append(")"); }
@@ -1363,7 +1369,7 @@ class MemberDefImpl::IMPL
     MemberDef *groupMember;
 
     bool isTypedefValCached;
-    ClassDef *cachedTypedefValue;
+    const ClassDef *cachedTypedefValue;
     QCString cachedTypedefTemplSpec;
     QCString cachedResolvedType;
 
@@ -1407,6 +1413,7 @@ class MemberDefImpl::IMPL
     QCString declFileName;
     int declLine;
     int declColumn;
+    int numberOfFlowKW;
 };
 
 MemberDefImpl::IMPL::IMPL() :
@@ -1422,7 +1429,8 @@ MemberDefImpl::IMPL::IMPL() :
     category(0),
     categoryRelation(0),
     declLine(-1),
-    declColumn(-1)
+    declColumn(-1),
+    numberOfFlowKW(0)
 {
 }
 
@@ -1559,7 +1567,7 @@ void MemberDefImpl::IMPL::init(Definition *def,
  * \param e  A string representing the throw clause of the members.
  * \param p  The protection context of the member, possible values are:
  *           \c Public, \c Protected, \c Private.
- * \param v  The degree of `virtualness' of the member, possible values are:
+ * \param v  The degree of 'virtualness' of the member, possible values are:
  *           \c Normal, \c Virtual, \c Pure.
  * \param s  A boolean that is true iff the member is static.
  * \param r  The relationship between the class and the member.
@@ -2102,13 +2110,13 @@ ClassDef *MemberDefImpl::getClassDefOfAnonymousType() const
     cname=getNamespaceDef()->name();
   }
   QCString ltype(m_impl->type);
-  // strip `static' keyword from ltype
+  // strip 'static' keyword from ltype
   //if (ltype.left(7)=="static ") ltype=ltype.right(ltype.length()-7);
-  // strip `friend' keyword from ltype
+  // strip 'friend' keyword from ltype
   ltype.stripPrefix("friend ");
   static QRegExp r("@[0-9]+");
   int l,i=r.match(ltype,0,&l);
-  //printf("ltype=`%s' i=%d\n",ltype.data(),i);
+  //printf("ltype='%s' i=%d\n",ltype.data(),i);
   // search for the last anonymous scope in the member type
   ClassDef *annoClassDef=0;
   if (i!=-1) // found anonymous scope in type
@@ -2250,7 +2258,7 @@ QCString MemberDefImpl::getDeclType() const
   {
     ltype="using";
   }
-  // strip `friend' keyword from ltype
+  // strip 'friend' keyword from ltype
   ltype.stripPrefix("friend ");
   if (ltype=="@") // rename type from enum values
   {
@@ -2359,7 +2367,7 @@ void MemberDefImpl::writeDeclaration(OutputList &ol,
   {
     ltype="using";
   }
-  // strip `friend' keyword from ltype
+  // strip 'friend' keyword from ltype
   ltype.stripPrefix("friend ");
   static QRegExp r("@[0-9]+");
 
@@ -2367,7 +2375,7 @@ void MemberDefImpl::writeDeclaration(OutputList &ol,
   int l,i=r.match(ltype,0,&l);
   if (i!=-1) // member has an anonymous type
   {
-    //printf("annoClassDef=%p annMemb=%p scopeName=`%s' anonymous=`%s'\n",
+    //printf("annoClassDef=%p annMemb=%p scopeName='%s' anonymous='%s'\n",
     //    annoClassDef,annMemb,cname.data(),ltype.mid(i,l).data());
 
     if (annoClassDef) // type is an anonymous compound
@@ -2384,7 +2392,7 @@ void MemberDefImpl::writeDeclaration(OutputList &ol,
         ol.writeNonBreakableSpace(3);
       }
       QCString varName=ltype.right(ltype.length()-ir).stripWhiteSpace();
-      //printf(">>>>>> ltype=`%s' varName=`%s'\n",ltype.data(),varName.data());
+      //printf(">>>>>> ltype='%s' varName='%s'\n",ltype.data(),varName.data());
       ol.docify("}");
       if (varName.isEmpty() && (name().isEmpty() || name().at(0)=='@'))
       {
@@ -2945,7 +2953,7 @@ void MemberDefImpl::_writeCallerGraph(OutputList &ol) const
     {
        warn_uncond("Caller graph for '%s' not generated, too many nodes. Consider increasing DOT_GRAPH_MAX_NODES.\n",qPrint(qualifiedName()));
     }
-    else if (!callerGraph.isTrivial() && !callerGraph.isTooBig())
+    else if (!callerGraph.isTrivial())
     {
       msg("Generating caller graph for function %s\n",qPrint(qualifiedName()));
       ol.disable(OutputGenerator::Man);
@@ -3381,7 +3389,7 @@ void MemberDefImpl::writeDocumentation(const MemberList *ml,
   bool inFile = container->definitionType()==Definition::TypeFile;
   bool hasDocs = isDetailedSectionVisible(inGroup,inFile);
 
-  //printf("MemberDefImpl::writeDocumentation(): name=`%s' hasDocs=`%d' containerType=%d inGroup=%d sectionLinkable=%d\n",
+  //printf("MemberDefImpl::writeDocumentation(): name='%s' hasDocs='%d' containerType=%d inGroup=%d sectionLinkable=%d\n",
   //    name().data(),hasDocs,container->definitionType(),inGroup,isDetailedSectionLinkable());
 
   //if ( !hasDocs ) return;
@@ -3423,7 +3431,7 @@ void MemberDefImpl::writeDocumentation(const MemberList *ml,
 
   QCString ldef = definition();
   QCString title = name();
-  //printf("member `%s' def=`%s'\n",name().data(),ldef.data());
+  //printf("member '%s' def='%s'\n",name().data(),ldef.data());
   if (isEnumerate())
   {
     if (title.at(0)=='@')
@@ -3497,7 +3505,7 @@ void MemberDefImpl::writeDocumentation(const MemberList *ml,
     }
     if (!found) // anonymous compound
     {
-      //printf("Anonymous compound `%s'\n",cname.data());
+      //printf("Anonymous compound '%s'\n",cname.data());
       ol.startDoxyAnchor(cfname,cname,memAnchor,doxyName,doxyArgs);
       ol.startMemberDoc(ciname,name(),memAnchor,name(),memCount,memTotal,showInline);
       // search for the last anonymous compound name in the definition
@@ -3748,7 +3756,7 @@ void MemberDefImpl::writeDocumentation(const MemberList *ml,
       //               )
      )
   {
-    //printf("md=%s initLines=%d init=`%s'\n",name().data(),initLines,init.data());
+    //printf("md=%s initLines=%d init='%s'\n",name().data(),initLines,init.data());
     ol.startBold();
     if (m_impl->mtype==MemberType_Define)
       ol.parseText(theTranslator->trDefineValue());
@@ -5625,7 +5633,7 @@ bool MemberDefImpl::isTypedefValCached() const
   return m_impl->isTypedefValCached;
 }
 
-ClassDef *MemberDefImpl::getCachedTypedefVal() const
+const ClassDef *MemberDefImpl::getCachedTypedefVal() const
 {
   return m_impl->cachedTypedefValue;
 }
@@ -5907,7 +5915,7 @@ QCString MemberDefImpl::enumBaseType() const
 }
 
 
-void MemberDefImpl::cacheTypedefVal(ClassDef*val, const QCString & templSpec, const QCString &resolvedType)
+void MemberDefImpl::cacheTypedefVal(const ClassDef*val, const QCString & templSpec, const QCString &resolvedType)
 {
   m_impl->isTypedefValCached=TRUE;
   m_impl->cachedTypedefValue=val;
@@ -5967,6 +5975,16 @@ void MemberDefImpl::invalidateCachedArgumentTypes()
 {
   invalidateCachedTypesInArgumentList(m_impl->defArgList);
   invalidateCachedTypesInArgumentList(m_impl->declArgList);
+}
+
+void MemberDefImpl::incrementFlowKeyWordCount()
+{
+  m_impl->numberOfFlowKW++;
+}
+
+int MemberDefImpl::numberOfFlowKeyWords() const
+{
+  return m_impl->numberOfFlowKW;
 }
 
 //----------------
@@ -6052,7 +6070,7 @@ void combineDeclarationAndDefinition(MemberDef *mdec,MemberDef *mdef)
                        )
        ) /* match found */
     {
-      //printf("Found member %s: definition in %s (doc=`%s') and declaration in %s (doc=`%s')\n",
+      //printf("Found member %s: definition in %s (doc='%s') and declaration in %s (doc='%s')\n",
       //    mn->memberName(),
       //    mdef->getFileDef()->name().data(),mdef->documentation().data(),
       //    mdec->getFileDef()->name().data(),mdec->documentation().data()

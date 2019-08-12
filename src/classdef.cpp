@@ -33,6 +33,8 @@
 #include "example.h"
 #include "outputlist.h"
 #include "dot.h"
+#include "dotclassgraph.h"
+#include "dotrunner.h"
 #include "defargs.h"
 #include "debug.h"
 #include "docparser.h"
@@ -516,7 +518,7 @@ class ClassDefAliasImpl : public DefinitionAliasImpl, public ClassDef
     { return getCdAlias()->countInheritanceNodes(); }
     virtual int countMemberDeclarations(MemberListType lt,const ClassDef *inheritedFrom,
                 int lt2,bool invert,bool showAlways,QPtrDict<void> *visitedClasses) const
-    { return countMemberDeclarations(lt,inheritedFrom,lt2,invert,showAlways,visitedClasses); }
+    { return getCdAlias()->countMemberDeclarations(lt,inheritedFrom,lt2,invert,showAlways,visitedClasses); }
     virtual void writeMemberDeclarations(OutputList &ol,MemberListType lt,const QCString &title,
                  const char *subTitle=0,bool showInline=FALSE,const ClassDef *inheritedFrom=0,
                  int lt2=-1,bool invert=FALSE,bool showAlways=FALSE,
@@ -1717,8 +1719,12 @@ void ClassDefImpl::writeInheritanceGraph(OutputList &ol) const
       (Config_getBool(CLASS_DIAGRAMS) || Config_getBool(CLASS_GRAPH)))
     // write class diagram using dot
   {
-    DotClassGraph inheritanceGraph(this,DotNode::Inheritance);
-    if (!inheritanceGraph.isTrivial() && !inheritanceGraph.isTooBig())
+    DotClassGraph inheritanceGraph(this,Inheritance);
+    if (inheritanceGraph.isTooBig())
+    {
+       warn_uncond("Inheritance graph for '%s' not generated, too many nodes. Consider increasing DOT_GRAPH_MAX_NODES.\n",name().data());
+    }
+    else if (!inheritanceGraph.isTrivial())
     {
       ol.pushGeneratorState();
       ol.disable(OutputGenerator::Man);
@@ -1836,7 +1842,7 @@ void ClassDefImpl::writeCollaborationGraph(OutputList &ol) const
 {
   if (Config_getBool(HAVE_DOT) /*&& Config_getBool(COLLABORATION_GRAPH)*/)
   {
-    DotClassGraph usageImplGraph(this,DotNode::Collaboration);
+    DotClassGraph usageImplGraph(this,Collaboration);
     if (!usageImplGraph.isTrivial())
     {
       ol.pushGeneratorState();
@@ -3324,7 +3330,7 @@ void ClassDefImpl::addTypeConstraint(const QCString &typeConstraint,const QCStri
   //printf("addTypeContraint(%s,%s)\n",type.data(),typeConstraint.data());
   static bool hideUndocRelation = Config_getBool(HIDE_UNDOC_RELATIONS);
   if (typeConstraint.isEmpty() || type.isEmpty()) return;
-  ClassDef *cd = getResolvedClass(this,getFileDef(),typeConstraint);
+  ClassDef *cd = const_cast<ClassDef*>(getResolvedClass(this,getFileDef(),typeConstraint));
   if (cd==0 && !hideUndocRelation)
   {
     cd = new ClassDefImpl(getDefFileName(),getDefLine(),getDefColumn(),typeConstraint,ClassDef::Class);
@@ -3450,7 +3456,7 @@ bool ClassDefImpl::hasNonReferenceSuperClass() const
 void ClassDefImpl::writeDeclaration(OutputList &ol,const MemberDef *md,bool inGroup,
     const ClassDef *inheritedFrom,const char *inheritId) const
 {
-  //printf("ClassName=`%s' inGroup=%d\n",name().data(),inGroup);
+  //printf("ClassName='%s' inGroup=%d\n",name().data(),inGroup);
 
   ol.docify(compoundTypeString());
   QCString cn = displayName(FALSE);
@@ -3564,8 +3570,8 @@ bool ClassDefImpl::hasDocumentation() const
 
 //----------------------------------------------------------------------
 // recursive function:
-// returns TRUE iff class definition `bcd' represents an (in)direct base
-// class of class definition `cd'.
+// returns TRUE iff class definition 'bcd' represents an (in)direct base
+// class of class definition 'cd'.
 
 bool ClassDefImpl::isBaseClass(const ClassDef *bcd, bool followInstances,int level) const
 {
@@ -3630,7 +3636,7 @@ static bool isStandardFunc(MemberDef *md)
 }
 
 /*!
- * recursively merges the `all members' lists of a class base
+ * recursively merges the 'all members' lists of a class base
  * with that of this class. Must only be called for classes without
  * subclasses!
  */
@@ -3775,7 +3781,7 @@ void ClassDefImpl::mergeMembers()
                 {
                   if (!isStandardFunc(srcMd))
                   {
-                    //printf("    insertMember `%s'\n",srcMd->name().data());
+                    //printf("    insertMember '%s'\n",srcMd->name().data());
                     internalInsertMember(srcMd,prot,FALSE);
                   }
                 }
@@ -3852,7 +3858,7 @@ void ClassDefImpl::mergeMembers()
                   {
                     if (!isStandardFunc(mi->memberDef))
                     {
-                      //printf("    insertMember `%s'\n",mi->memberDef->name().data());
+                      //printf("    insertMember '%s'\n",mi->memberDef->name().data());
                       internalInsertMember(mi->memberDef,prot,FALSE);
                     }
                   }
@@ -4113,7 +4119,7 @@ void ClassDefImpl::determineImplUsageRelation()
       if (md->isVariable()) // for each member variable in this class
       {
         QCString type=removeRedundantWhiteSpace(md->typeString());
-        //printf("in class %s found var type=`%s' name=`%s'\n",
+        //printf("in class %s found var type='%s' name='%s'\n",
         //            name().data(),type.data(),md->name().data());
         int pos=0;
         QCString usedClassName;
@@ -4121,7 +4127,7 @@ void ClassDefImpl::determineImplUsageRelation()
         bool found=FALSE;
         while (extractClassNameFromType(type,pos,usedClassName,templSpec)!=-1 && !found)
         {
-          //printf("usedClassName=`%s' templSpec=%s\n",usedClassName.data(),templSpec.data());
+          //printf("usedClassName='%s' templSpec=%s\n",usedClassName.data(),templSpec.data());
           // check if usedClassName is a template argument of its class
           ClassDef *cd=md->getClassDef();
           if (cd && cd->templateArguments())
@@ -4233,11 +4239,11 @@ void ClassDefImpl::addUsedInterfaceClasses(MemberDef *md,const char *typeStr)
       {
         ucd = new UsesClassDef(cd);
         m_impl->usesIntfClassDict->insert(cd->name(),ucd);
-        //printf("in class `%s' adding used intf class `%s'\n",
+        //printf("in class '%s' adding used intf class '%s'\n",
         //  name().data(),cd->name().data());
       }
       ucd->addAccessor(md->name());
-      //printf("in class `%s' adding accessor `%s' to class `%s'\n",
+      //printf("in class '%s' adding accessor '%s' to class '%s'\n",
       //    name().data(),md->name().data(),ucd->classDef->name().data());
     }
     p=i+l;
@@ -4476,7 +4482,7 @@ ClassDef *ClassDefImpl::insertTemplateInstance(const QCString &fileName,
   ClassDef *templateClass=m_impl->templateInstances->find(templSpec);
   if (templateClass==0)
   {
-    Debug::print(Debug::Classes,0,"      New template instance class `%s'`%s'\n",qPrint(name()),qPrint(templSpec));
+    Debug::print(Debug::Classes,0,"      New template instance class '%s''%s'\n",qPrint(name()),qPrint(templSpec));
     QCString tcname = removeRedundantWhiteSpace(localName()+templSpec);
     templateClass = new ClassDefImpl(
         fileName,startLine,startColumn,tcname,ClassDef::Class);
@@ -4499,7 +4505,7 @@ ClassDef *ClassDefImpl::getVariableInstance(const char *templSpec) const
   ClassDef *templateClass=m_impl->variableInstances->find(templSpec);
   if (templateClass==0)
   {
-    Debug::print(Debug::Classes,0,"      New template variable instance class `%s'`%s'\n",qPrint(name()),qPrint(templSpec));
+    Debug::print(Debug::Classes,0,"      New template variable instance class '%s' '%s'\n",qPrint(name()),qPrint(templSpec));
     QCString tcname = removeRedundantWhiteSpace(name()+templSpec);
     templateClass = new ClassDefImpl("<code>",1,1,tcname,
                         ClassDef::Class,0,0,FALSE);

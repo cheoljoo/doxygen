@@ -236,9 +236,11 @@ void RTFDocVisitor::visit(DocStyleChange *s)
       if (s->enable()) m_t << "{\\b ";      else m_t << "} ";
       break;
     case DocStyleChange::Strike:
+    case DocStyleChange::Del:
       if (s->enable()) m_t << "{\\strike ";      else m_t << "} ";
       break;
     case DocStyleChange::Underline:
+    case DocStyleChange::Ins:
       if (s->enable()) m_t << "{\\ul ";      else m_t << "} ";
       break;
     case DocStyleChange::Italic:
@@ -529,10 +531,12 @@ void RTFDocVisitor::visit(DocInclude *inc)
 
 void RTFDocVisitor::visit(DocIncOperator *op)
 {
-  //printf("DocIncOperator: type=%d first=%d, last=%d text=`%s'\n",
+  //printf("DocIncOperator: type=%d first=%d, last=%d text='%s'\n",
   //    op->type(),op->isFirst(),op->isLast(),op->text().data());
   DBG_RTF("{\\comment RTFDocVisitor::visit(DocIncOperator)}\n");
-  SrcLangExt langExt = getLanguageFromFileName(m_langExt);
+  QCString locLangExt = getFileNameExtension(op->includeFileName());
+  if (locLangExt.isEmpty()) locLangExt = m_langExt;
+  SrcLangExt langExt = getLanguageFromFileName(locLangExt);
   if (op->isFirst()) 
   {
     if (!m_hide)
@@ -549,14 +553,14 @@ void RTFDocVisitor::visit(DocIncOperator *op)
     popEnabled();
     if (!m_hide) 
     {
-      FileDef *fd;
+      FileDef *fd = 0;
       if (!op->includeFileName().isEmpty())
       {
         QFileInfo cfi( op->includeFileName() );
         fd = createFileDef( cfi.dirPath().utf8(), cfi.fileName().utf8() );
       }
 
-      Doxygen::parserManager->getParser(m_langExt)
+      Doxygen::parserManager->getParser(locLangExt)
                             ->parseCode(m_ci,op->context(),op->text(),langExt,
                                         op->isExample(),op->exampleFile(),
                                         fd,     // fileDef
@@ -782,7 +786,6 @@ void RTFDocVisitor::visitPre(DocSimpleSect *s)
   // special case 1: user defined title
   if (s->type()!=DocSimpleSect::User && s->type()!=DocSimpleSect::Rcs)
   {
-    m_t << ":";
     m_t << "\\par";
     m_t << "}"; // end bold
     incIndentLevel();
@@ -1377,7 +1380,6 @@ void RTFDocVisitor::visitPre(DocParamSect *s)
     default:
       ASSERT(0);
   }
-  m_t << ":";
   m_t << "\\par";
   m_t << "}" << endl;
   bool useTable = s->type()==DocParamSect::Param ||
@@ -1493,10 +1495,8 @@ void RTFDocVisitor::visitPre(DocParamList *pl)
     }
     QListIterator<DocNode> li(pl->paramTypes());
     DocNode *type;
-    bool first=TRUE;
     for (li.toFirst();(type=li.current());++li)
     {
-      if (!first) m_t << " | "; else first=FALSE;
       if (type->kind()==DocNode::Kind_Word)
       {
         visit((DocWord*)type); 
@@ -1504,6 +1504,10 @@ void RTFDocVisitor::visitPre(DocParamList *pl)
       else if (type->kind()==DocNode::Kind_LinkedWord)
       {
         visit((DocLinkedWord*)type); 
+      }
+      else if (type->kind()==DocNode::Kind_Sep)
+      {
+        m_t << " " << ((DocSeparator *)type)->chars() << " ";
       }
     }
     if (useTable)
@@ -1653,18 +1657,6 @@ void RTFDocVisitor::visitPost(DocInternalRef *)
   DBG_RTF("{\\comment RTFDocVisitor::visitPost(DocInternalRef)}\n");
   endLink("");
   m_t << " ";
-}
-
-void RTFDocVisitor::visitPre(DocCopy *)
-{
-  if (m_hide) return;
-  DBG_RTF("{\\comment RTFDocVisitor::visitPre(DocCopy)}\n");
-}
-
-void RTFDocVisitor::visitPost(DocCopy *)
-{
-  if (m_hide) return;
-  DBG_RTF("{\\comment RTFDocVisitor::visitPost(DocCopy)}\n");
 }
 
 void RTFDocVisitor::visitPre(DocText *)

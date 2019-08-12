@@ -263,7 +263,9 @@ DB_VIS_C
     case DocStyleChange::Small: /* XSLT Stylesheets can be used */ break;
                                                                    /* HTML only */
     case DocStyleChange::Strike:  break;
+    case DocStyleChange::Del:        break;
     case DocStyleChange::Underline:  break;
+    case DocStyleChange::Ins:        break;
     case DocStyleChange::Div:  /* HTML only */ break;
     case DocStyleChange::Span: /* HTML only */ break;
   }
@@ -472,20 +474,22 @@ DB_VIS_C
     pushEnabled();
     m_hide = TRUE;
   }
-  SrcLangExt langExt = getLanguageFromFileName(m_langExt);
+  QCString locLangExt = getFileNameExtension(op->includeFileName());
+  if (locLangExt.isEmpty()) locLangExt = m_langExt;
+  SrcLangExt langExt = getLanguageFromFileName(locLangExt);
   if (op->type()!=DocIncOperator::Skip)
   {
     popEnabled();
     if (!m_hide)
     {
-      FileDef *fd;
+      FileDef *fd = 0;
       if (!op->includeFileName().isEmpty())
       {
         QFileInfo cfi( op->includeFileName() );
         fd = createFileDef( cfi.dirPath().utf8(), cfi.fileName().utf8() );
       }
 
-      Doxygen::parserManager->getParser(m_langExt)
+      Doxygen::parserManager->getParser(locLangExt)
         ->parseCode(m_ci,op->context(),
             op->text(),langExt,op->isExample(),
             op->exampleFile(),
@@ -634,152 +638,152 @@ DB_VIS_C
     case DocSimpleSect::See:
       if (m_insidePre) 
       {
-        m_t << "<formalpara><title>" << theTranslator->trSeeAlso() << ": </title>" << endl;
+        m_t << "<formalpara><title>" << theTranslator->trSeeAlso() << "</title>" << endl;
       } 
       else 
       {
-        m_t << "<formalpara><title>" << convertToDocBook(theTranslator->trSeeAlso()) << ": </title>" << endl;
+        m_t << "<formalpara><title>" << convertToDocBook(theTranslator->trSeeAlso()) << "</title>" << endl;
       }
       break;
     case DocSimpleSect::Return:
       if (m_insidePre) 
       {
-        m_t << "<formalpara><title>" << theTranslator->trReturns()<< ": </title>" << endl;
+        m_t << "<formalpara><title>" << theTranslator->trReturns()<< "</title>" << endl;
       } 
       else 
       {
-        m_t << "<formalpara><title>" << convertToDocBook(theTranslator->trReturns()) << ": </title>" << endl;
+        m_t << "<formalpara><title>" << convertToDocBook(theTranslator->trReturns()) << "</title>" << endl;
       }
       break;
     case DocSimpleSect::Author:
       if (m_insidePre) 
       {
-        m_t << "<formalpara><title>" << theTranslator->trAuthor(TRUE, TRUE) << ": </title>" << endl;
+        m_t << "<formalpara><title>" << theTranslator->trAuthor(TRUE, TRUE) << "</title>" << endl;
       } 
       else 
       {
-        m_t << "<formalpara><title>" << convertToDocBook(theTranslator->trAuthor(TRUE, TRUE)) << ": </title>" << endl;
+        m_t << "<formalpara><title>" << convertToDocBook(theTranslator->trAuthor(TRUE, TRUE)) << "</title>" << endl;
       }
       break;
     case DocSimpleSect::Authors:
       if (m_insidePre) 
       {
-        m_t << "<formalpara><title>" << theTranslator->trAuthor(TRUE, FALSE) << ": </title>" << endl;
+        m_t << "<formalpara><title>" << theTranslator->trAuthor(TRUE, FALSE) << "</title>" << endl;
       } 
       else 
       {
-        m_t << "<formalpara><title>" << convertToDocBook(theTranslator->trAuthor(TRUE, FALSE)) << ": </title>" << endl;
+        m_t << "<formalpara><title>" << convertToDocBook(theTranslator->trAuthor(TRUE, FALSE)) << "</title>" << endl;
       }
       break;
     case DocSimpleSect::Version:
       if (m_insidePre) 
       {
-        m_t << "<formalpara><title>" << theTranslator->trVersion() << ": </title>" << endl;
+        m_t << "<formalpara><title>" << theTranslator->trVersion() << "</title>" << endl;
       } 
       else 
       {
-        m_t << "<formalpara><title>" << convertToDocBook(theTranslator->trVersion()) << ": </title>" << endl;
+        m_t << "<formalpara><title>" << convertToDocBook(theTranslator->trVersion()) << "</title>" << endl;
       }
       break;
     case DocSimpleSect::Since:
       if (m_insidePre) 
       {
-        m_t << "<formalpara><title>" << theTranslator->trSince() << ": </title>" << endl;
+        m_t << "<formalpara><title>" << theTranslator->trSince() << "</title>" << endl;
       } 
       else 
       {
-        m_t << "<formalpara><title>" << convertToDocBook(theTranslator->trSince()) << ": </title>" << endl;
+        m_t << "<formalpara><title>" << convertToDocBook(theTranslator->trSince()) << "</title>" << endl;
       }
       break;
     case DocSimpleSect::Date:
       if (m_insidePre) 
       {
-        m_t << "<formalpara><title>" << theTranslator->trDate() << ": </title>" << endl;
+        m_t << "<formalpara><title>" << theTranslator->trDate() << "</title>" << endl;
       } 
       else 
       {
-        m_t << "<formalpara><title>" << convertToDocBook(theTranslator->trDate()) << ": </title>" << endl;
+        m_t << "<formalpara><title>" << convertToDocBook(theTranslator->trDate()) << "</title>" << endl;
       }
       break;
     case DocSimpleSect::Note:
       if (m_insidePre) 
       {
-        m_t << "<note><title>" << theTranslator->trNote() << ": </title>" << endl;
+        m_t << "<note><title>" << theTranslator->trNote() << "</title>" << endl;
       } 
       else 
       {
-        m_t << "<note><title>" << convertToDocBook(theTranslator->trNote()) << ": </title>" << endl;
+        m_t << "<note><title>" << convertToDocBook(theTranslator->trNote()) << "</title>" << endl;
       }
       break;
     case DocSimpleSect::Warning:
       if (m_insidePre) 
       {
-        m_t << "<warning><title>" << theTranslator->trWarning() << ": </title>" << endl;
+        m_t << "<warning><title>" << theTranslator->trWarning() << "</title>" << endl;
       } 
       else 
       {
-        m_t << "<warning><title>" << convertToDocBook(theTranslator->trWarning()) << ": </title>" << endl;
+        m_t << "<warning><title>" << convertToDocBook(theTranslator->trWarning()) << "</title>" << endl;
       }
       break;
     case DocSimpleSect::Pre:
       if (m_insidePre) 
       {
-        m_t << "<formalpara><title>" << theTranslator->trPrecondition() << ": </title>" << endl;
+        m_t << "<formalpara><title>" << theTranslator->trPrecondition() << "</title>" << endl;
       } 
       else 
       {
-        m_t << "<formalpara><title>" << convertToDocBook(theTranslator->trPrecondition()) << ": </title>" << endl;
+        m_t << "<formalpara><title>" << convertToDocBook(theTranslator->trPrecondition()) << "</title>" << endl;
       }
       break;
     case DocSimpleSect::Post:
       if (m_insidePre) 
       {
-        m_t << "<formalpara><title>" << theTranslator->trPostcondition() << ": </title>" << endl;
+        m_t << "<formalpara><title>" << theTranslator->trPostcondition() << "</title>" << endl;
       } 
       else 
       {
-        m_t << "<formalpara><title>" << convertToDocBook(theTranslator->trPostcondition()) << ": </title>" << endl;
+        m_t << "<formalpara><title>" << convertToDocBook(theTranslator->trPostcondition()) << "</title>" << endl;
       }
       break;
     case DocSimpleSect::Copyright:
       if (m_insidePre) 
       {
-        m_t << "<formalpara><title>" << theTranslator->trCopyright() << ": </title>" << endl;
+        m_t << "<formalpara><title>" << theTranslator->trCopyright() << "</title>" << endl;
       } 
       else 
       {
-        m_t << "<formalpara><title>" << convertToDocBook(theTranslator->trCopyright()) << ": </title>" << endl;
+        m_t << "<formalpara><title>" << convertToDocBook(theTranslator->trCopyright()) << "</title>" << endl;
       }
       break;
     case DocSimpleSect::Invar:
       if (m_insidePre) 
       {
-        m_t << "<formalpara><title>" << theTranslator->trInvariant() << ": </title>" << endl;
+        m_t << "<formalpara><title>" << theTranslator->trInvariant() << "</title>" << endl;
       } 
       else 
       {
-        m_t << "<formalpara><title>" << convertToDocBook(theTranslator->trInvariant()) << ": </title>" << endl;
+        m_t << "<formalpara><title>" << convertToDocBook(theTranslator->trInvariant()) << "</title>" << endl;
       }
       break;
     case DocSimpleSect::Remark:
       // <remark> is miising the <title> possibility
       if (m_insidePre) 
       {
-        m_t << "<formalpara><title>" << theTranslator->trRemarks() << ": </title>" << endl;
+        m_t << "<formalpara><title>" << theTranslator->trRemarks() << "</title>" << endl;
       } 
       else 
       {
-        m_t << "<formalpara><title>" << convertToDocBook(theTranslator->trRemarks()) << ": </title>" << endl;
+        m_t << "<formalpara><title>" << convertToDocBook(theTranslator->trRemarks()) << "</title>" << endl;
       }
       break;
     case DocSimpleSect::Attention:
       if (m_insidePre) 
       {
-        m_t << "<caution><title>" << theTranslator->trAttention() << ": </title>" << endl;
+        m_t << "<caution><title>" << theTranslator->trAttention() << "</title>" << endl;
       } 
       else 
       {
-        m_t << "<caution><title>" << convertToDocBook(theTranslator->trAttention()) << ": </title>" << endl;
+        m_t << "<caution><title>" << convertToDocBook(theTranslator->trAttention()) << "</title>" << endl;
       }
       break;
     case DocSimpleSect::User:
@@ -1100,6 +1104,10 @@ DB_VIS_C
     else if (opt->name=="height")
     {
       // just skip it
+    }
+    else if (opt->name=="nowrap" && opt->value.isEmpty())
+    {
+      m_t << " " << opt->name << "='nowrap'";
     }
     else
     {
@@ -1429,11 +1437,9 @@ DB_VIS_C
   {
     QListIterator<DocNode> li(pl->paramTypes());
     DocNode *type;
-    bool first=TRUE;
     m_t << "                                <entry>";
     for (li.toFirst();(type=li.current());++li)
     {
-      if (!first) m_t << " | "; else first=FALSE;
       if (type->kind()==DocNode::Kind_Word)
       {
         visit((DocWord*)type);
@@ -1442,6 +1448,11 @@ DB_VIS_C
       {
         visit((DocLinkedWord*)type);
       }
+      else if (type->kind()==DocNode::Kind_Sep)
+      {
+        m_t << " " << ((DocSeparator *)type)->chars() << " ";
+      }
+
     }
     m_t << "                                </entry>";
   }
@@ -1520,22 +1531,6 @@ DB_VIS_C
   endLink();
   m_t << " ";
 }
-
-void DocbookDocVisitor::visitPre(DocCopy *)
-{
-DB_VIS_C
-  if (m_hide) return;
-  // TODO: to be implemented
-}
-
-
-void DocbookDocVisitor::visitPost(DocCopy *)
-{
-DB_VIS_C
-  if (m_hide) return;
-  // TODO: to be implemented
-}
-
 
 void DocbookDocVisitor::visitPre(DocText *)
 {

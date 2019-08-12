@@ -95,12 +95,14 @@ static int              g_stringContext;
 static QGString *       g_copyString;
 static int              g_indent = 0;
 static int              g_curIndent = 0;
+static bool             g_importTuple;
 
 static QDict<QCString>  g_packageNameCache(257);
 
 static char             g_atomStart;
 static char             g_atomEnd;
 static int              g_atomCount;
+
 
 //static bool             g_insideConstructor;
 
@@ -143,7 +145,7 @@ static void initEntry()
   current->stat       = gstat;
   current->lang       = SrcLangExt_Python; 
   current->setParent(current_root);
-  initGroupInfo(current);
+  Doxygen::docGroup.initGroupInfo(current);
   gstat = FALSE;
 }
 
@@ -230,6 +232,17 @@ static QCString findPackageScope(const char *fileName)
   return findPackageScopeFromPath(fi.dirPath(TRUE).data());
 }
 
+static void addFrom(bool all)
+{
+  QCString item=all ? g_packageName : g_packageName+"."+yytext;
+  current->name=removeRedundantWhiteSpace(substitute(item,".","::"));
+  current->fileName = yyFileName; 
+  //printf("Adding using declaration: found:%s:%d name=%s\n",yyFileName.data(),yyLineNr,current->name.data());
+  current->section=all ? Entry::USINGDIR_SEC : Entry::USINGDECL_SEC;
+  current_root->addSubEntry(current);
+  current = new Entry ;
+  initEntry();
+}
 //-----------------------------------------------------------------------------
 
 static void lineCount()
@@ -537,6 +550,8 @@ STARTDOCSYMS      "##"
 %x SingleQuoteString
 %x DoubleQuoteString
 %x TripleString
+%x SingleQuoteStringIgnore
+%x DoubleQuoteStringIgnore
 
   /* import */
 %x FromMod
@@ -700,45 +715,43 @@ STARTDOCSYMS      "##"
 
 <FromModItem>{
   "*"		{ // import all
-                  QCString item=g_packageName;
-		  current->name=removeRedundantWhiteSpace(substitute(item,".","::"));
-		  current->fileName = yyFileName; 
-		  //printf("Adding using directive: found:%s:%d name=%s\n",yyFileName.data(),yyLineNr,current->name.data());
-		  current->section=Entry::USINGDIR_SEC;
-		  current_root->addSubEntry(current);
-		  current = new Entry ;
-		  initEntry();
+                  addFrom(TRUE);
                   BEGIN(Search);
     		}
   {IDENTIFIER}/{B}","{B} {
-                  QCString item=g_packageName+"."+yytext;
-		  current->name=removeRedundantWhiteSpace(substitute(item,".","::"));
-		  current->fileName = yyFileName; 
-		  //printf("Adding using declaration: found:%s:%d name=%s\n",yyFileName.data(),yyLineNr,current->name.data());
-		  current->section=Entry::USINGDECL_SEC;
-		  current_root->addSubEntry(current);
-		  current = new Entry ;
-		  initEntry();
+                  addFrom(FALSE);
 		}
+  {IDENTIFIER}/{B}")" {
+                  addFrom(FALSE);
+                }
   {IDENTIFIER}  {
-                  QCString item=g_packageName+"."+yytext;
-		  current->name=removeRedundantWhiteSpace(substitute(item,".","::"));
-		  current->fileName = yyFileName; 
-		  //printf("Adding using declaration: found:%s:%d name=%s\n",yyFileName.data(),yyLineNr,current->name.data());
-		  current->section=Entry::USINGDECL_SEC;
-		  current_root->addSubEntry(current);
-		  current = new Entry ;
-		  initEntry();
-                  BEGIN(Search);
+                  addFrom(FALSE);
+                  if (!g_importTuple)
+                  {
+                    BEGIN(Search);
+                  }
 		}
   \n		{
                   incLineNr();
-                  BEGIN(Search);
+                  if (!g_importTuple)
+                  {
+                    BEGIN(Search);
+                  }
                 }
   {B}		{
 		}
-  ","		{ 
+  "("           {
+                  g_importTuple=TRUE;
+                }
+  ")"           {
+                  g_importTuple=FALSE;
+                  BEGIN(Search);
+                }
+  ","		{
   		}
+  "\\"{B}\n     { // line continuation
+                  incLineNr();
+                }
   .             {
                   unput(*yytext);
                   BEGIN(Search);
@@ -1282,8 +1295,28 @@ STARTDOCSYMS      "##"
 					    );
                          //Has base class-do stuff
                        }
+    "'"	               { // start of a single quoted string
+       			 g_stringContext=YY_START;
+                         BEGIN( SingleQuoteStringIgnore );
+                       }
+    "\""               { // start of a double quoted string
+       			 g_stringContext=YY_START;
+                         BEGIN( DoubleQuoteStringIgnore );
+                       }
 }
 
+<SingleQuoteStringIgnore>{
+    "'"	               { // end of a single quoted string
+			 BEGIN(g_stringContext);
+                       }
+    .	               { }
+}
+<DoubleQuoteStringIgnore>{
+    "\""	       { // end of a double quoted string
+			 BEGIN(g_stringContext);
+                       }
+    .	               { }
+}
 
 <ClassCaptureIndent>{
     "\n"|({BB}"\n")            {
@@ -1702,6 +1735,10 @@ STARTDOCSYMS      "##"
                                  lineCount();
                                }
 
+<*>"'"                         {
+       fprintf(stderr,"Quote: %d\n",YY_START);
+                               }
+
 <*>.                           {
 				 //printf("[pyscanner] '%s' [ state %d ]  [line %d] no match\n",
 				 //       yytext, YY_START, yyLineNr);
@@ -1746,14 +1783,14 @@ static void parseCompounds(Entry *rt)
       current = new Entry;
       initEntry();
 
-      groupEnterCompound(yyFileName,yyLineNr,ce->name);
+      Doxygen::docGroup.enterCompound(yyFileName,yyLineNr,ce->name);
       
       pyscannerYYlex() ;
       g_lexInit=TRUE;
       delete current; current=0;
       ce->program.resize(0);
 
-      groupLeaveCompound(yyFileName,yyLineNr,ce->name);
+      Doxygen::docGroup.leaveCompound(yyFileName,yyLineNr,ce->name);
 
     }
     parseCompounds(ce);
@@ -1813,7 +1850,7 @@ static void parseMain(const char *fileName,const char *fileBuf,Entry *rt)
     initParser();
     current       = new Entry;
 
-    groupEnterFile(yyFileName,yyLineNr);
+    Doxygen::docGroup.enterFile(yyFileName,yyLineNr);
     
     current->reset();
     initEntry();
@@ -1822,7 +1859,7 @@ static void parseMain(const char *fileName,const char *fileBuf,Entry *rt)
     pyscannerYYlex();
     g_lexInit=TRUE;
 
-    groupLeaveFile(yyFileName,yyLineNr);
+    Doxygen::docGroup.leaveFile(yyFileName,yyLineNr);
 
     current_root->program.resize(0);
     delete current; current=0;

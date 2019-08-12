@@ -269,7 +269,7 @@ static void endCodeLine()
   g_code->endCodeLine();
 }
 
-/*! write a code fragment `text' that may span multiple lines, inserting
+/*! write a code fragment 'text' that may span multiple lines, inserting
  * line numbers for each line.
  */
 static void codifyLines(char *text)
@@ -749,6 +749,10 @@ LANGUAGE_BIND_SPEC BIND{BS}"("{BS}C{BS}(,{BS}NAME{BS}"="{BS}"\""(.*)"\""{BS})?")
                                           if (g_isFixedForm)
                                           {
                                             if ((yy_my_start == 1) && ((yytext[0] == 'c') || (yytext[0] == 'C'))) YY_FTN_REJECT;
+                                          }
+                                          if (g_currentMemberDef && g_currentMemberDef->isFunction())
+                                          {
+                                            g_currentMemberDef->incrementFlowKeyWordCount();
                                           }
    					  /* font class is defined e.g. in doxygen.css */
   					  startFontClass("keywordflow");

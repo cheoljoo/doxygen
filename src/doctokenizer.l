@@ -157,7 +157,7 @@ static int computeIndent(const char *str,int length)
 
 static void processSection()
 {
-  //printf("%s: found section/anchor with name `%s'\n",g_fileName.data(),g_secLabel.data());
+  //printf("%s: found section/anchor with name '%s'\n",g_fileName.data(),g_secLabel.data());
   QCString file;
   if (g_memberGroup)
   {
@@ -222,7 +222,7 @@ static void handleHtmlTag()
     }
     startName=i;
     // search for end of name
-    while (i<(int)yyleng && !isspace((uchar)c) && c!='=') { c=tagText.at(++i); }
+    while (i<(int)yyleng && !isspace((uchar)c) && c!='=' && c!= '>') { c=tagText.at(++i); }
     endName=i;
     HtmlAttrib opt;
     opt.name  = tagText.mid(startName,endName-startName).lower(); 
@@ -405,8 +405,8 @@ WORD1NQ   {ESCWORD}|{CHARWORDQ}+|"{"|"}"
 WORD2NQ   "."|","|"("|")"|"["|"]"|"::"|":"|";"|"\?"|"="|"'"
 CAPTION   [cC][aA][pP][tT][iI][oO][nN]
 HTMLTAG   "<"(("/")?){ID}({WS}+{ATTRIB})*{WS}*(("/")?)">" 
-HTMLKEYL  "strong"|"center"|"table"|"caption"|"small"|"code"|"dfn"|"var"|"img"|"pre"|"sub"|"sup"|"tr"|"td"|"th"|"ol"|"ul"|"li"|"tt"|"kbd"|"em"|"hr"|"dl"|"dt"|"dd"|"br"|"i"|"a"|"b"|"p"|"strike"|"u"
-HTMLKEYU  "STRONG"|"CENTER"|"TABLE"|"CAPTION"|"SMALL"|"CODE"|"DFN"|"VAR"|"IMG"|"PRE"|"SUB"|"SUP"|"TR"|"TD"|"TH"|"OL"|"UL"|"LI"|"TT"|"KBD"|"EM"|"HR"|"DL"|"DT"|"DD"|"BR"|"I"|"A"|"B"|"P"|"STRIKE"|"U"
+HTMLKEYL  "strong"|"center"|"table"|"caption"|"small"|"code"|"dfn"|"var"|"img"|"pre"|"sub"|"sup"|"tr"|"td"|"th"|"ol"|"ul"|"li"|"tt"|"kbd"|"em"|"hr"|"dl"|"dt"|"dd"|"br"|"i"|"a"|"b"|"p"|"strike"|"u"|"del"|"ins"
+HTMLKEYU  "STRONG"|"CENTER"|"TABLE"|"CAPTION"|"SMALL"|"CODE"|"DFN"|"VAR"|"IMG"|"PRE"|"SUB"|"SUP"|"TR"|"TD"|"TH"|"OL"|"UL"|"LI"|"TT"|"KBD"|"EM"|"HR"|"DL"|"DT"|"DD"|"BR"|"I"|"A"|"B"|"P"|"STRIKE"|"U"|"DEL"|"INS"
 HTMLKEYW  {HTMLKEYL}|{HTMLKEYU}
 REFWORD2_PRE   ("#"|"::")?((({ID}{TEMPLPART}?)|{ANONNS})("."|"#"|"::"|"-"|"/"))*({ID}{TEMPLPART}?(":")?)
 REFWORD2       {REFWORD2_PRE}{FUNCARG2}?
@@ -658,7 +658,7 @@ REFWORD_NOCV   {FILEMASK}|{LABELID}|{REFWORD2_NOCV}|{REFWORD3}|{REFWORD4_NOCV}
 			 g_token->isEMailAddr=TRUE;
 			 return TK_URL;
                        }
-<St_Para>"$"{ID}":"[^\n$]+"$" { /* RCS tag */
+<St_Para>"$"{ID}":"[^:\n$][^\n$]*"$" { /* RCS tag */
                          QCString tagName(yytext+1);
 			 int index=tagName.find(':');
   			 g_token->name = tagName.left(index);
@@ -902,6 +902,7 @@ REFWORD_NOCV   {FILEMASK}|{LABELID}|{REFWORD2_NOCV}|{REFWORD3}|{REFWORD4_NOCV}
                          g_token->sectionId = QCString(yytext).stripWhiteSpace();
                          return RetVal_OK;
                        }
+<St_PlantUMLOpt>"\n"   |
 <St_PlantUMLOpt>.      {
                          g_token->sectionId = "";
                          unput(*yytext);
@@ -1150,7 +1151,7 @@ REFWORD_NOCV   {FILEMASK}|{LABELID}|{REFWORD2_NOCV}|{REFWORD3}|{REFWORD4_NOCV}
 			 g_token->name = g_token->name.left((int)yyleng-2);
 			 return TK_WORD;
                        }
-<St_Param>({PHPTYPE}{BLANK}*"|"{BLANK}*)*{PHPTYPE}{WS}+("&")?"$"{LABELID} {
+<St_Param>({PHPTYPE}{BLANK}*("["{BLANK}*"]")*{BLANK}*"|"{BLANK}*)*{PHPTYPE}{BLANK}*("["{BLANK}*"]")*{WS}+("&")?"$"{LABELID} {
   			 QCString params = yytext;
 			 int j = params.find('&');
 			 int i = params.find('$');
@@ -1342,7 +1343,7 @@ REFWORD_NOCV   {FILEMASK}|{LABELID}|{REFWORD2_NOCV}|{REFWORD3}|{REFWORD4_NOCV}
                          BEGIN(St_Sections);
 		       }
 <St_SecTitle,St_SecLabel1,St_SecLabel2>. {
-                         warn(g_fileName,yylineno,"Unexpected character `%s' while looking for section label or title",yytext); 
+                         warn(g_fileName,yylineno,"Unexpected character '%s' while looking for section label or title",yytext); 
                        }
 
 <St_Snippet>[^\n]+     |
@@ -1357,12 +1358,12 @@ REFWORD_NOCV   {FILEMASK}|{LABELID}|{REFWORD2_NOCV}|{REFWORD3}|{REFWORD4_NOCV}
                          warn(g_fileName,yylineno,"Unexpected new line character"); 
 		       }
 <*>[\\@<>&$#%~"=]      { /* unescaped special character */
-                         //warn(g_fileName,yylineno,"Unexpected character `%s', assuming command \\%s was meant.",yytext,yytext); 
+                         //warn(g_fileName,yylineno,"Unexpected character '%s', assuming command \\%s was meant.",yytext,yytext); 
 			 g_token->name = yytext;
 			 return TK_COMMAND_SEL();
                        }
 <*>.                   { 
-                         warn(g_fileName,yylineno,"Unexpected character `%s'",yytext);
+                         warn(g_fileName,yylineno,"Unexpected character '%s'",yytext);
 		       }
 %%
 
@@ -1374,7 +1375,7 @@ void doctokenizerYYFindSections(const char *input,Definition *d,
   if (input==0) return;
   printlex(yy_flex_debug, TRUE, __FILE__, fileName);
   g_inputString = input;
-  //printf("parsing --->`%s'<---\n",input);
+  //printf("parsing --->'%s'<---\n",input);
   g_inputPos    = 0;
   g_definition  = d;
   g_memberGroup = mg;

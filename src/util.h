@@ -119,6 +119,7 @@ class LetterToIndexMap : public SIntDict<T>
 
 QCString langToString(SrcLangExt lang);
 QCString getLanguageSpecificSeparator(SrcLangExt lang,bool classScope=FALSE);
+QCString replaceScopeSeparator(QCString str);
 
 //--------------------------------------------------------------------
 
@@ -206,10 +207,10 @@ QCString resolveDefines(const char *n);
 
 ClassDef *getClass(const char *key);
 
-ClassDef *getResolvedClass(const Definition *scope,
+const ClassDef *getResolvedClass(const Definition *scope,
                            const FileDef *fileScope,
                            const char *key,
-                           MemberDef **pTypeDef=0,
+                           const MemberDef **pTypeDef=0,
                            QCString *pTemplSpec=0,
                            bool mayBeUnlinkable=FALSE,
                            bool mayBeHidden=FALSE,
@@ -340,6 +341,7 @@ PageDef *addRelatedPage(const char *name,
                        );
 
 QCString escapeCharsInString(const char *name,bool allowDots,bool allowUnderscore=FALSE);
+QCString unescapeCharsInString(const char *s);
 
 void addGroupListToTitle(OutputList &ol,const Definition *d);
 
@@ -389,6 +391,7 @@ QCString stripLeadingAndTrailingEmptyLines(const QCString &s,int &docLine);
 
 bool updateLanguageMapping(const QCString &extension,const QCString &parser);
 SrcLangExt getLanguageFromFileName(const QCString& fileName);
+QCString getFileNameExtension(QCString fn);
 void initDefaultExtensionMapping();
 void addCodeOnlyMappings();
 
@@ -396,10 +399,12 @@ MemberDef *getMemberFromSymbol(const Definition *scope,const FileDef *fileScope,
                                 const char *n);
 bool checkIfTypedef(const Definition *scope,const FileDef *fileScope,const char *n);
 
-ClassDef *newResolveTypedef(const FileDef *fileScope,MemberDef *md,
-                            MemberDef **pMemType=0,QCString *pTemplSpec=0,
-                            QCString *pResolvedType=0,
-                            ArgumentList *actTemplParams=0);
+const ClassDef *newResolveTypedef(const FileDef *fileScope,
+                                  const MemberDef *md,
+                                  const MemberDef **pMemType=0,
+                                  QCString *pTemplSpec=0,
+                                  QCString *pResolvedType=0,
+                                  ArgumentList *actTemplParams=0);
 
 QCString parseCommentAsText(const Definition *scope,const MemberDef *member,const QCString &doc,const QCString &fileName,int lineNr);
 

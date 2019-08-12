@@ -101,6 +101,7 @@ static QCString               g_relPath;
 
 static bool                   g_hasParamCommand;
 static bool                   g_hasReturnCommand;
+static QDict<void>            g_retvalsFound;
 static QDict<void>            g_paramsFound;
 static const MemberDef *      g_memberDef;
 static bool                   g_isExample;
@@ -136,6 +137,7 @@ struct DocParserContext
   bool         hasParamCommand;
   bool         hasReturnCommand;
   const MemberDef *  memberDef;
+  QDict<void>  retvalsFound;
   QDict<void>  paramsFound;
   bool         isExample;
   QCString     exampleName;
@@ -183,6 +185,7 @@ static void docParserPushContext(bool saveParamInfo=TRUE)
     ctx->hasParamCommand    = g_hasParamCommand;
     ctx->hasReturnCommand   = g_hasReturnCommand;
     ctx->paramsFound        = g_paramsFound;
+    ctx->retvalsFound       = g_retvalsFound;
   }
 
   ctx->memberDef          = g_memberDef;
@@ -223,6 +226,7 @@ static void docParserPopContext(bool keepParamInfo=FALSE)
   {
     g_hasParamCommand     = ctx->hasParamCommand;
     g_hasReturnCommand    = ctx->hasReturnCommand;
+    g_retvalsFound        = ctx->retvalsFound;
     g_paramsFound         = ctx->paramsFound;
   }
   g_memberDef           = ctx->memberDef;
@@ -283,7 +287,7 @@ static QCString findAndCopyImage(const char *fileName,DocImage::Type type, bool 
   bool ambig;
   FileDef *fd;
   //printf("Search for %s\n",fileName);
-  if ((fd=findFileDef(Doxygen::imageNameDict,fileName,ambig)))
+  if ((fd=findFileDef(Doxygen::imageNameDict,fileName,ambig)) && !ambig)
   {
     QCString inputFile = fd->absFilePath();
     QFile inImage(inputFile);
@@ -374,13 +378,16 @@ static QCString findAndCopyImage(const char *fileName,DocImage::Type type, bool 
       return baseName;
     }
   }
-  else if (ambig && dowarn)
+  else if (ambig)
   {
-    QCString text;
-    text.sprintf("image file name %s is ambiguous.\n",qPrint(fileName));
-    text+="Possible candidates:\n";
-    text+=showFileDefMatches(Doxygen::imageNameDict,fileName);
-    warn_doc_error(g_fileName,doctokenizerYYlineno,text);
+    if (dowarn)
+    {
+      QCString text;
+      text.sprintf("image file name %s is ambiguous.\n",qPrint(fileName));
+      text+="Possible candidates:\n";
+      text+=showFileDefMatches(Doxygen::imageNameDict,fileName);
+      warn_doc_error(g_fileName,doctokenizerYYlineno,text);
+    }
   }
   else
   {
@@ -396,13 +403,13 @@ static QCString findAndCopyImage(const char *fileName,DocImage::Type type, bool 
   return result;
 }
 
-/*! Collects the parameters found with \@param or \@retval commands
- *  in a global list g_paramsFound. If \a isParam is set to TRUE
- *  and the parameter is not an actual parameter of the current
+/*! Collects the parameters found with \@param command
+ *  in a global list g_paramsFound. If
+ *  the parameter is not an actual parameter of the current
  *  member g_memberDef, then a warning is raised (unless warnings
  *  are disabled altogether).
  */
-static void checkArgumentName(const QCString &name,bool isParam)
+static void checkArgumentName(const QCString &name)
 {                
   if (!Config_getBool(WARN_IF_DOC_ERROR)) return;
   if (g_memberDef==0) return; // not a member
@@ -419,7 +426,7 @@ static void checkArgumentName(const QCString &name,bool isParam)
   {
     QCString aName=name.mid(i,l);
     if (lang==SrcLangExt_Fortran) aName=aName.lower();
-    //printf("aName=`%s'\n",aName.data());
+    //printf("aName='%s'\n",aName.data());
     ArgumentListIterator ali(*al);
     const Argument *a;
     bool found=FALSE;
@@ -428,16 +435,16 @@ static void checkArgumentName(const QCString &name,bool isParam)
       QCString argName = g_memberDef->isDefine() ? a->type : a->name;
       if (lang==SrcLangExt_Fortran) argName=argName.lower();
       argName=argName.stripWhiteSpace();
-      //printf("argName=`%s' aName=%s\n",argName.data(),aName.data());
+      //printf("argName='%s' aName=%s\n",argName.data(),aName.data());
       if (argName.right(3)=="...") argName=argName.left(argName.length()-3);
-      if (aName==argName && isParam)
+      if (aName==argName)
       {
 	g_paramsFound.insert(aName,(void *)(0x8));
 	found=TRUE;
 	break;
       }
     }
-    if (!found && isParam)
+    if (!found)
     {
       //printf("member type=%d\n",g_memberDef->memberType());
       QCString scope=g_memberDef->getScopeString();
@@ -464,6 +471,23 @@ static void checkArgumentName(const QCString &name,bool isParam)
     }
     p=i+l;
   }
+}
+/*! Collects the return values found with \@retval command
+ *  in a global list g_retvalsFound.
+ */
+static void checkRetvalName(const QCString &name)
+{
+  if (!Config_getBool(WARN_IF_DOC_ERROR)) return;
+  if (g_memberDef==0 || name.isEmpty()) return; // not a member or no valid name
+  if (g_retvalsFound.find(name))
+  {
+     warn_doc_error(g_memberDef->getDefFileName(),
+                    g_memberDef->getDefLine(),
+                    "return value '" + name + "' of " +
+                    QCString(g_memberDef->qualifiedName()) +
+                    " has multiple documentation sections");
+  }
+  g_retvalsFound.insert(name,(void *)(0x8));
 }
 
 /*! Checks if the parameters that have been specified using \@param are
@@ -662,6 +686,8 @@ static bool findDocsForMemberOrCompound(const char *commandName,
   *pBrief="";
   *pDef=0;
   QCString cmdArg=substitute(commandName,"#","::");
+  cmdArg = replaceScopeSeparator(cmdArg);
+
   int l=cmdArg.length();
   if (l==0) return FALSE;
 
@@ -687,7 +713,6 @@ static bool findDocsForMemberOrCompound(const char *commandName,
 
   QCString name=removeRedundantWhiteSpace(cmdArg.left(funcStart));
   QCString args=cmdArg.right(l-funcStart);
-
   // try if the link is to a member
   const MemberDef    *md=0;
   const ClassDef     *cd=0;
@@ -696,7 +721,7 @@ static bool findDocsForMemberOrCompound(const char *commandName,
   const GroupDef     *gd=0;
   const PageDef      *pd=0;
   bool found = getDefs(
-      g_context.find('.')==-1?g_context.data():"", // `find('.') is a hack to detect files
+      g_context.find('.')==-1?g_context.data():"", // find('.') is a hack to detect files
       name,
       args.isEmpty()?0:args.data(),
       md,cd,fd,nd,gd,FALSE,0,TRUE);
@@ -718,7 +743,7 @@ static bool findDocsForMemberOrCompound(const char *commandName,
     {
       fullName.prepend(g_context.left(scopeOffset)+"::");
     }
-    //printf("Trying fullName=`%s'\n",fullName.data());
+    //printf("Trying fullName='%s'\n",fullName.data());
 
     // try class, namespace, group, page, file reference
     cd = Doxygen::classSDict->find(fullName);
@@ -816,8 +841,8 @@ static int handleStyleArgument(DocNode *parent,QList<DocNode> &children,
   int tok=doctokenizerYYlex();
   if (tok!=TK_WHITESPACE)
   {
-    warn_doc_error(g_fileName,doctokenizerYYlineno,"expected whitespace after %s command",
-	qPrint(cmdName));
+    warn_doc_error(g_fileName,doctokenizerYYlineno,"expected whitespace after \\%s command",
+	qPrint(saveCmdName));
     return tok;
   }
   while ((tok=doctokenizerYYlex()) && 
@@ -852,7 +877,7 @@ static int handleStyleArgument(DocNode *parent,QList<DocNode> &children,
       break;
     }
   }
-  DBG(("handleStyleArgument(%s) end tok=%x\n",qPrint(cmdName),tok));
+  DBG(("handleStyleArgument(%s) end tok=%x\n",qPrint(saveCmdName),tok));
   return (tok==TK_NEWPARA || tok==TK_LISTITEM || tok==TK_ENDLIST
          ) ? tok : RetVal_OK; 
 }
@@ -995,7 +1020,9 @@ const char *DocStyleChange::styleString() const
     case DocStyleChange::Div:          return "div";
     case DocStyleChange::Span:         return "span";
     case DocStyleChange::Strike:       return "strike";
+    case DocStyleChange::Del:          return "del";
     case DocStyleChange::Underline:    return "u";
+    case DocStyleChange::Ins:          return "ins";
   }
   return "<invalid>";
 }
@@ -1142,17 +1169,25 @@ static void handleLinkedWord(DocNode *parent,QList<DocNode> &children,bool ignor
 
 static void handleParameterType(DocNode *parent,QList<DocNode> &children,const QCString &paramTypes)
 {
-  QCString name = g_token->name;
-  int p=0,i;
+  QCString name = g_token->name; // save token name
+  QCString name1;
+  int p=0,i,l,ii;
   while ((i=paramTypes.find('|',p))!=-1)
   {
-    g_token->name = paramTypes.mid(p,i-p);
+    name1 = paramTypes.mid(p,i-p);
+    ii=name1.find('[');
+    g_token->name=ii!=-1 ? name1.mid(0,ii) : name1; // take part without []
     handleLinkedWord(parent,children);
+    if (ii!=-1) children.append(new DocWord(parent,name1.mid(ii))); // add [] part
     p=i+1;
+    children.append(new DocSeparator(parent,"|"));
   }
-  g_token->name = paramTypes.mid(p);
+  name1 = paramTypes.mid(p);
+  ii=name1.find('[');
+  g_token->name=ii!=-1 ? name1.mid(0,ii) : name1;
   handleLinkedWord(parent,children);
-  g_token->name = name;
+  if (ii!=-1) children.append(new DocWord(parent,name1.mid(ii)));
+  g_token->name = name; // restore original token name
 }
 
 static DocInternalRef *handleInternalRef(DocNode *parent)
@@ -1162,7 +1197,7 @@ static DocInternalRef *handleInternalRef(DocNode *parent)
   QCString tokenName = g_token->name;
   if (tok!=TK_WHITESPACE)
   {
-    warn_doc_error(g_fileName,doctokenizerYYlineno,"expected whitespace after %s command",
+    warn_doc_error(g_fileName,doctokenizerYYlineno,"expected whitespace after \\%s command",
         qPrint(tokenName));
     return 0;
   }
@@ -1182,7 +1217,7 @@ static DocAnchor *handleAnchor(DocNode *parent)
   int tok=doctokenizerYYlex();
   if (tok!=TK_WHITESPACE)
   {
-    warn_doc_error(g_fileName,doctokenizerYYlineno,"expected whitespace after %s command",
+    warn_doc_error(g_fileName,doctokenizerYYlineno,"expected whitespace after \\%s command",
         qPrint(g_token->name));
     return 0;
   }
@@ -1525,6 +1560,16 @@ reparsetoken:
               handleStyleLeave(parent,children,DocStyleChange::Strike,tokenName);
             }
             break;
+          case HTML_DEL:
+            if (!g_token->endTag)
+            {
+              handleStyleEnter(parent,children,DocStyleChange::Del,&g_token->attribs);
+            }
+            else
+            {
+              handleStyleLeave(parent,children,DocStyleChange::Del,tokenName);
+            }
+            break;
           case HTML_UNDERLINE:
             if (!g_token->endTag)
             {
@@ -1533,6 +1578,16 @@ reparsetoken:
             else
             {
               handleStyleLeave(parent,children,DocStyleChange::Underline,tokenName);
+            }
+            break;
+          case HTML_INS:
+            if (!g_token->endTag)
+            {
+              handleStyleEnter(parent,children,DocStyleChange::Ins,&g_token->attribs);
+            }
+            else
+            {
+              handleStyleLeave(parent,children,DocStyleChange::Ins,tokenName);
             }
             break;
           case HTML_CODE:
@@ -1791,7 +1846,7 @@ static void readTextFileByName(const QCString &file,QCString &text)
   // as a fallback we also look in the exampleNameDict
   bool ambig;
   FileDef *fd;
-  if ((fd=findFileDef(Doxygen::exampleNameDict,file,ambig)))
+  if ((fd=findFileDef(Doxygen::exampleNameDict,file,ambig)) && !ambig)
   {
     text = fileToString(fd->absFilePath(),Config_getBool(FILTER_SOURCE_FILES));
   }
@@ -1848,6 +1903,7 @@ DocAnchor::DocAnchor(DocNode *parent,const QCString &id,bool newAnchor)
   if (id.isEmpty())
   {
     warn_doc_error(g_fileName,doctokenizerYYlineno,"Empty anchor label");
+    return;
   }
 
   if (id.left(CiteConsts::anchorPrefix.length()) == CiteConsts::anchorPrefix) 
@@ -1860,7 +1916,7 @@ DocAnchor::DocAnchor(DocNode *parent,const QCString &id,bool newAnchor)
     }
     else 
     {
-      warn_doc_error(g_fileName,doctokenizerYYlineno,"Invalid cite anchor id `%s'",qPrint(id));
+      warn_doc_error(g_fileName,doctokenizerYYlineno,"Invalid cite anchor id '%s'",qPrint(id));
       m_anchor = "invalid";
       m_file = "invalid";
     }
@@ -1885,7 +1941,7 @@ DocAnchor::DocAnchor(DocNode *parent,const QCString &id,bool newAnchor)
     }
     else
     {
-      warn_doc_error(g_fileName,doctokenizerYYlineno,"Invalid anchor id `%s'",qPrint(id));
+      warn_doc_error(g_fileName,doctokenizerYYlineno,"Invalid anchor id '%s'",qPrint(id));
       m_anchor = "invalid";
       m_file = "invalid";
     }
@@ -2093,100 +2149,6 @@ void DocIncOperator::parse()
       g_includeFileOffset = QMIN(l,o+1); // set pointer to start of new line
       m_showLineNo = g_includeFileShowLineNo;
       break;
-  }
-}
-
-//---------------------------------------------------------------------------
-
-void DocCopy::parse(QList<DocNode> &children)
-{
-  QCString doc,brief;
-  const Definition *def = 0;
-  if (findDocsForMemberOrCompound(m_link,&doc,&brief,&def))
-  {
-    if (g_copyStack.findRef(def)==-1) // definition not parsed earlier
-    {
-      bool         hasParamCommand  = g_hasParamCommand;
-      bool         hasReturnCommand = g_hasReturnCommand;
-      QDict<void>  paramsFound      = g_paramsFound;
-      //printf("..1 hasParamCommand=%d hasReturnCommand=%d paramsFound=%d\n",
-      //      g_hasParamCommand,g_hasReturnCommand,g_paramsFound.count());
-
-      docParserPushContext(FALSE);
-      g_scope = def;
-      if (def->definitionType()==Definition::TypeMember && def->getOuterScope())
-      {
-        if (def->getOuterScope()!=Doxygen::globalScope)
-        {
-          g_context=def->getOuterScope()->name();
-        }
-      }
-      else if (def!=Doxygen::globalScope)
-      {
-        g_context=def->name();
-      }
-      g_styleStack.clear();
-      g_nodeStack.clear();
-      g_paramsFound.clear();
-      g_copyStack.append(def);
-      // make sure the descriptions end with a newline, so the parser will correctly
-      // handle them in all cases.
-      //printf("doc='%s'\n",doc.data());
-      //printf("brief='%s'\n",brief.data());
-      if (m_copyBrief)
-      {
-        brief+='\n';
-        internalValidatingParseDoc(m_parent,children,brief);
-
-        //printf("..2 hasParamCommand=%d hasReturnCommand=%d paramsFound=%d\n",
-        //    g_hasParamCommand,g_hasReturnCommand,g_paramsFound.count());
-        hasParamCommand  = hasParamCommand  || g_hasParamCommand;
-        hasReturnCommand = hasReturnCommand || g_hasReturnCommand;
-        QDictIterator<void> it(g_paramsFound);
-        void *item;
-        for (;(item=it.current());++it)
-        {
-          paramsFound.insert(it.currentKey(),it.current());
-        }
-      }
-      if (m_copyDetails)
-      {
-        doc+='\n';
-        internalValidatingParseDoc(m_parent,children,doc);
-
-        //printf("..3 hasParamCommand=%d hasReturnCommand=%d paramsFound=%d\n",
-        //    g_hasParamCommand,g_hasReturnCommand,g_paramsFound.count());
-        hasParamCommand  = hasParamCommand  || g_hasParamCommand;
-        hasReturnCommand = hasReturnCommand || g_hasReturnCommand;
-        QDictIterator<void> it(g_paramsFound);
-        void *item;
-        for (;(item=it.current());++it)
-        {
-          paramsFound.insert(it.currentKey(),it.current());
-        }
-      }
-      g_copyStack.remove(def);
-      ASSERT(g_styleStack.isEmpty());
-      ASSERT(g_nodeStack.isEmpty());
-      docParserPopContext(TRUE);
-
-      g_hasParamCommand  = hasParamCommand;
-      g_hasReturnCommand = hasReturnCommand;
-      g_paramsFound      = paramsFound;
-
-      //printf("..4 hasParamCommand=%d hasReturnCommand=%d paramsFound=%d\n",
-      //      g_hasParamCommand,g_hasReturnCommand,g_paramsFound.count());
-    }
-    else // oops, recursion
-    {
-      warn_doc_error(g_fileName,doctokenizerYYlineno,"recursive call chain of \\copydoc commands detected at %d\n",
-          doctokenizerYYlineno);
-    }
-  }
-  else
-  {
-    warn_doc_error(g_fileName,doctokenizerYYlineno,"target %s of \\copydoc command not found",
-        qPrint(m_link));
   }
 }
 
@@ -2530,7 +2492,7 @@ DocRef::DocRef(DocNode *parent,const QCString &target,const QCString &context) :
     }
   }
   m_text = target;
-  warn_doc_error(g_fileName,doctokenizerYYlineno,"unable to resolve reference to `%s' for \\ref command",
+  warn_doc_error(g_fileName,doctokenizerYYlineno,"unable to resolve reference to '%s' for \\ref command",
            qPrint(target)); 
 }
 
@@ -2628,7 +2590,7 @@ DocCite::DocCite(DocNode *parent,const QCString &target,const QCString &) //cont
   }
   else if (cite==0)
   {
-    warn_doc_error(g_fileName,doctokenizerYYlineno,"unable to resolve reference to `%s' for \\cite command",
+    warn_doc_error(g_fileName,doctokenizerYYlineno,"unable to resolve reference to '%s' for \\cite command",
              qPrint(target));
   }
   else
@@ -2671,7 +2633,7 @@ DocLink::DocLink(DocNode *parent,const QCString &target)
   }
 
   // bogus link target
-  warn_doc_error(g_fileName,doctokenizerYYlineno,"unable to resolve link to `%s' for \\link command",
+  warn_doc_error(g_fileName,doctokenizerYYlineno,"unable to resolve link to '%s' for \\link command",
          qPrint(target)); 
 }
 
@@ -2775,8 +2737,9 @@ DocDotFile::DocDotFile(DocNode *parent,const QCString &name,const QCString &cont
   m_parent = parent; 
 }
 
-void DocDotFile::parse()
+bool DocDotFile::parse()
 {
+  bool ok = false;
   defaultHandleTitleAndSize(CMD_DOTFILE,this,m_children,m_width,m_height);
 
   bool ambig;
@@ -2785,15 +2748,16 @@ void DocDotFile::parse()
   {
     fd = findFileDef(Doxygen::dotFileNameDict,m_name+".dot",ambig);
   }
-  if (fd)
+  if (fd && !ambig)
   {
     m_file = fd->absFilePath();
+    ok = true;
   }
   else if (ambig)
   {
     warn_doc_error(g_fileName,doctokenizerYYlineno,"included dot file name %s is ambiguous.\n"
            "Possible candidates:\n%s",qPrint(m_name),
-           qPrint(showFileDefMatches(Doxygen::exampleNameDict,m_name))
+           qPrint(showFileDefMatches(Doxygen::dotFileNameDict,m_name))
           );
   }
   else
@@ -2801,6 +2765,7 @@ void DocDotFile::parse()
     warn_doc_error(g_fileName,doctokenizerYYlineno,"included dot file %s is not found "
            "in any of the paths specified via DOTFILE_DIRS!",qPrint(m_name));
   }
+  return ok;
 }
 
 DocMscFile::DocMscFile(DocNode *parent,const QCString &name,const QCString &context) : 
@@ -2809,8 +2774,9 @@ DocMscFile::DocMscFile(DocNode *parent,const QCString &name,const QCString &cont
   m_parent = parent; 
 }
 
-void DocMscFile::parse()
+bool DocMscFile::parse()
 {
+  bool ok = false;
   defaultHandleTitleAndSize(CMD_MSCFILE,this,m_children,m_width,m_height);
 
   bool ambig;
@@ -2819,15 +2785,16 @@ void DocMscFile::parse()
   {
     fd = findFileDef(Doxygen::mscFileNameDict,m_name+".msc",ambig);
   }
-  if (fd)
+  if (fd && !ambig)
   {
     m_file = fd->absFilePath();
+    ok = true;
   }
   else if (ambig)
   {
     warn_doc_error(g_fileName,doctokenizerYYlineno,"included msc file name %s is ambiguous.\n"
            "Possible candidates:\n%s",qPrint(m_name),
-           qPrint(showFileDefMatches(Doxygen::exampleNameDict,m_name))
+           qPrint(showFileDefMatches(Doxygen::mscFileNameDict,m_name))
           );
   }
   else
@@ -2835,6 +2802,7 @@ void DocMscFile::parse()
     warn_doc_error(g_fileName,doctokenizerYYlineno,"included msc file %s is not found "
            "in any of the paths specified via MSCFILE_DIRS!",qPrint(m_name));
   }
+  return ok;
 }
 
 //---------------------------------------------------------------------------
@@ -2845,8 +2813,9 @@ DocDiaFile::DocDiaFile(DocNode *parent,const QCString &name,const QCString &cont
   m_parent = parent;
 }
 
-void DocDiaFile::parse()
+bool DocDiaFile::parse()
 {
+  bool ok = false;
   defaultHandleTitleAndSize(CMD_DIAFILE,this,m_children,m_width,m_height);
 
   bool ambig;
@@ -2855,15 +2824,16 @@ void DocDiaFile::parse()
   {
     fd = findFileDef(Doxygen::diaFileNameDict,m_name+".dia",ambig);
   }
-  if (fd)
+  if (fd && !ambig)
   {
     m_file = fd->absFilePath();
+    ok = true;
   }
   else if (ambig)
   {
     warn_doc_error(g_fileName,doctokenizerYYlineno,"included dia file name %s is ambiguous.\n"
            "Possible candidates:\n%s",qPrint(m_name),
-           qPrint(showFileDefMatches(Doxygen::exampleNameDict,m_name))
+           qPrint(showFileDefMatches(Doxygen::diaFileNameDict,m_name))
           );
   }
   else
@@ -2871,6 +2841,7 @@ void DocDiaFile::parse()
     warn_doc_error(g_fileName,doctokenizerYYlineno,"included dia file %s is not found "
            "in any of the paths specified via DIAFILE_DIRS!",qPrint(m_name));
   }
+  return ok;
 }
 
 //---------------------------------------------------------------------------
@@ -2919,7 +2890,11 @@ DocImage::DocImage(DocNode *parent,const HtmlAttribList &attribs,const QCString 
 
 bool DocImage::isSVG() const
 {
-  return m_url.isEmpty() ? m_name.right(4)==".svg" : m_url.right(4)==".svg";
+  QCString  locName = m_url.isEmpty() ? m_name : m_url;
+  int len = locName.length();
+  int fnd = locName.find('?'); // ignore part from ? until end
+  if (fnd!=-1) fnd=len;
+  return fnd>=4 && locName.mid(fnd-4,4)==".svg";
 }
 
 void DocImage::parse()
@@ -3253,7 +3228,7 @@ DocHtmlCaption::DocHtmlCaption(DocNode *parent,const HtmlAttribList &attribs)
   HtmlAttrib *opt;
   for (li.toFirst();(opt=li.current());++li)
   {
-    if (opt->name=="id") // interpret id attribute as an anchor
+    if (opt->name=="id" && !opt->value.isEmpty()) // interpret id attribute as an anchor
     {
       SectionInfo *sec = Doxygen::sectionDict->find(opt->value);
       if (sec)
@@ -3270,7 +3245,7 @@ DocHtmlCaption::DocHtmlCaption(DocNode *parent,const HtmlAttribList &attribs)
       }
       else
       {
-        warn_doc_error(g_fileName,doctokenizerYYlineno,"Invalid caption id `%s'",qPrint(opt->value));
+        warn_doc_error(g_fileName,doctokenizerYYlineno,"Invalid caption id '%s'",qPrint(opt->value));
       }
     }
     else // copy attribute
@@ -4639,8 +4614,8 @@ int DocParamList::parse(const QCString &cmdName)
   int tok=doctokenizerYYlex();
   if (tok!=TK_WHITESPACE)
   {
-    warn_doc_error(g_fileName,doctokenizerYYlineno,"expected whitespace after %s command",
-        qPrint(cmdName));
+    warn_doc_error(g_fileName,doctokenizerYYlineno,"expected whitespace after \\%s command",
+        qPrint(saveCmdName));
     retval=0;
     goto endparamlist;
   }
@@ -4656,19 +4631,19 @@ int DocParamList::parse(const QCString &cmdName)
         handleParameterType(this,m_paramTypes,g_token->name.left(typeSeparator));
         g_token->name = g_token->name.mid(typeSeparator+1);
         g_hasParamCommand=TRUE;
-        checkArgumentName(g_token->name,TRUE);
+        checkArgumentName(g_token->name);
         ((DocParamSect*)parent())->m_hasTypeSpecifier=TRUE;
       }
       else
       {
         g_hasParamCommand=TRUE;
-        checkArgumentName(g_token->name,TRUE);
+        checkArgumentName(g_token->name);
       }
     }
     else if (m_type==DocParamSect::RetVal)
     {
       g_hasReturnCommand=TRUE;
-      checkArgumentName(g_token->name,FALSE);
+      checkRetvalName(g_token->name);
     }
     //m_params.append(g_token->name);
     handleLinkedWord(this,m_params);
@@ -4678,7 +4653,7 @@ int DocParamList::parse(const QCString &cmdName)
   if (tok==0) /* premature end of comment block */
   {
     warn_doc_error(g_fileName,doctokenizerYYlineno,"unexpected end of comment block while parsing the "
-        "argument of command %s",qPrint(cmdName));
+        "argument of command %s",qPrint(saveCmdName));
     retval=0;
     goto endparamlist;
   }
@@ -4713,12 +4688,12 @@ int DocParamList::parseXml(const QCString &paramName)
   if (m_type==DocParamSect::Param)
   {
     g_hasParamCommand=TRUE;
-    checkArgumentName(g_token->name,TRUE);
+    checkArgumentName(g_token->name);
   }
   else if (m_type==DocParamSect::RetVal)
   {
     g_hasReturnCommand=TRUE;
-    checkArgumentName(g_token->name,FALSE);
+    checkRetvalName(g_token->name);
   }
   
   handleLinkedWord(this,m_params);
@@ -4876,7 +4851,7 @@ void DocPara::handleCite()
   int tok=doctokenizerYYlex();
   if (tok!=TK_WHITESPACE)
   {
-    warn_doc_error(g_fileName,doctokenizerYYlineno,"expected whitespace after %s command",
+    warn_doc_error(g_fileName,doctokenizerYYlineno,"expected whitespace after \\%s command",
         qPrint("cite"));
     return;
   }
@@ -4908,7 +4883,7 @@ void DocPara::handleEmoji()
   int tok=doctokenizerYYlex();
   if (tok!=TK_WHITESPACE)
   {
-    warn_doc_error(g_fileName,doctokenizerYYlineno,"expected whitespace after %s command",
+    warn_doc_error(g_fileName,doctokenizerYYlineno,"expected whitespace after \\%s command",
         qPrint("emoji"));
     return;
   }
@@ -4955,12 +4930,13 @@ int DocPara::handleXRefItem()
 
 void DocPara::handleIncludeOperator(const QCString &cmdName,DocIncOperator::Type t)
 {
-  DBG(("handleIncludeOperator(%s)\n",qPrint(cmdName)));
+  QCString saveCmdName = cmdName;
+  DBG(("handleIncludeOperator(%s)\n",qPrint(saveCmdName)));
   int tok=doctokenizerYYlex();
   if (tok!=TK_WHITESPACE)
   {
-    warn_doc_error(g_fileName,doctokenizerYYlineno,"expected whitespace after %s command",
-        qPrint(cmdName));
+    warn_doc_error(g_fileName,doctokenizerYYlineno,"expected whitespace after \\%s command",
+        qPrint(saveCmdName));
     return;
   }
   doctokenizerYYsetStatePattern();
@@ -4969,13 +4945,13 @@ void DocPara::handleIncludeOperator(const QCString &cmdName,DocIncOperator::Type
   if (tok==0)
   {
     warn_doc_error(g_fileName,doctokenizerYYlineno,"unexpected end of comment block while parsing the "
-        "argument of command %s", qPrint(cmdName));
+        "argument of command %s", qPrint(saveCmdName));
     return;
   }
   else if (tok!=TK_WORD)
   {
     warn_doc_error(g_fileName,doctokenizerYYlineno,"unexpected token %s as the argument of %s",
-        tokToString(tok),qPrint(cmdName));
+        tokToString(tok),qPrint(saveCmdName));
     return;
   }
   DocIncOperator *op = new DocIncOperator(this,t,g_token->name,g_context,g_isExample,g_exampleName);
@@ -5023,7 +4999,7 @@ void DocPara::handleImage(const QCString &cmdName)
 	{
           if (g_token->name.lower() != "inline")
           {
-            warn_doc_error(g_fileName,doctokenizerYYlineno,"currently only 'inline' suported as option of %s command",
+            warn_doc_error(g_fileName,doctokenizerYYlineno,"currently only 'inline' supported as option of %s command",
               qPrint(saveCmdName));
           }
           else
@@ -5041,7 +5017,7 @@ void DocPara::handleImage(const QCString &cmdName)
         tok=doctokenizerYYlex();
         if (tok!=TK_WHITESPACE)
         {
-          warn_doc_error(g_fileName,doctokenizerYYlineno,"expected whitespace after %s command with option",
+          warn_doc_error(g_fileName,doctokenizerYYlineno,"expected whitespace after \\%s command with option",
             qPrint(saveCmdName));
           return;
         }
@@ -5049,7 +5025,7 @@ void DocPara::handleImage(const QCString &cmdName)
     }
     else
     {
-      warn_doc_error(g_fileName,doctokenizerYYlineno,"expected whitespace after %s command",
+      warn_doc_error(g_fileName,doctokenizerYYlineno,"expected whitespace after \\%s command",
         qPrint(saveCmdName));
       return;
     }
@@ -5064,7 +5040,7 @@ void DocPara::handleImage(const QCString &cmdName)
   tok=doctokenizerYYlex();
   if (tok!=TK_WHITESPACE)
   {
-    warn_doc_error(g_fileName,doctokenizerYYlineno,"expected whitespace after %s command",
+    warn_doc_error(g_fileName,doctokenizerYYlineno,"expected whitespace after \\%s command",
         qPrint(saveCmdName));
     return;
   }
@@ -5099,11 +5075,12 @@ void DocPara::handleImage(const QCString &cmdName)
 template<class T>
 void DocPara::handleFile(const QCString &cmdName)
 {
+  QCString saveCmdName = cmdName;
   int tok=doctokenizerYYlex();
   if (tok!=TK_WHITESPACE)
   {
-    warn_doc_error(g_fileName,doctokenizerYYlineno,"expected whitespace after %s command",
-        qPrint(cmdName));
+    warn_doc_error(g_fileName,doctokenizerYYlineno,"expected whitespace after \\%s command",
+        qPrint(saveCmdName));
     return;
   }
   doctokenizerYYsetStateFile();
@@ -5112,13 +5089,19 @@ void DocPara::handleFile(const QCString &cmdName)
   if (tok!=TK_WORD)
   {
     warn_doc_error(g_fileName,doctokenizerYYlineno,"unexpected token %s as the argument of %s",
-        tokToString(tok),qPrint(cmdName));
+        tokToString(tok),qPrint(saveCmdName));
     return;
   }
   QCString name = g_token->name;
   T *df = new T(this,name,g_context);
-  m_children.append(df);
-  df->parse();
+  if (df->parse())
+  {
+    m_children.append(df);
+  }
+  else
+  {
+    delete df;
+  }
 }
 
 void DocPara::handleVhdlFlow()
@@ -5130,11 +5113,12 @@ void DocPara::handleVhdlFlow()
 
 void DocPara::handleLink(const QCString &cmdName,bool isJavaLink)
 {
+  QCString saveCmdName = cmdName;
   int tok=doctokenizerYYlex();
   if (tok!=TK_WHITESPACE)
   {
-    warn_doc_error(g_fileName,doctokenizerYYlineno,"expected whitespace after %s command",
-        qPrint(cmdName));
+    warn_doc_error(g_fileName,doctokenizerYYlineno,"expected whitespace after \\%s command",
+        qPrint(saveCmdName));
     return;
   }
   doctokenizerYYsetStateLink();
@@ -5142,7 +5126,7 @@ void DocPara::handleLink(const QCString &cmdName,bool isJavaLink)
   if (tok!=TK_WORD)
   {
     warn_doc_error(g_fileName,doctokenizerYYlineno,"%s as the argument of %s",
-        tokToString(tok),qPrint(cmdName));
+        tokToString(tok),qPrint(saveCmdName));
     return;
   }
   doctokenizerYYsetStatePara();
@@ -5157,12 +5141,13 @@ void DocPara::handleLink(const QCString &cmdName,bool isJavaLink)
 
 void DocPara::handleRef(const QCString &cmdName)
 {
-  DBG(("handleRef(%s)\n",qPrint(cmdName)));
+  QCString saveCmdName = cmdName;
+  DBG(("handleRef(%s)\n",qPrint(saveCmdName)));
   int tok=doctokenizerYYlex();
   if (tok!=TK_WHITESPACE)
   {
-    warn_doc_error(g_fileName,doctokenizerYYlineno,"expected whitespace after %s command",
-        qPrint(cmdName));
+    warn_doc_error(g_fileName,doctokenizerYYlineno,"expected whitespace after \\%s command",
+        qPrint(saveCmdName));
     return;
   }
   doctokenizerYYsetStateRef();
@@ -5171,7 +5156,7 @@ void DocPara::handleRef(const QCString &cmdName)
   if (tok!=TK_WORD)
   {
     warn_doc_error(g_fileName,doctokenizerYYlineno,"unexpected token %s as the argument of %s",
-        tokToString(tok),qPrint(cmdName));
+        tokToString(tok),qPrint(saveCmdName));
     goto endref;
   }
   ref = new DocRef(this,g_token->name,g_context);
@@ -5184,6 +5169,7 @@ endref:
 void DocPara::handleInclude(const QCString &cmdName,DocInclude::Type t)
 {
   DBG(("handleInclude(%s)\n",qPrint(cmdName)));
+  QCString saveCmdName = cmdName;
   int tok=doctokenizerYYlex();
   bool isBlock = false;
   if (tok==TK_WORD && g_token->name=="{")
@@ -5224,8 +5210,8 @@ void DocPara::handleInclude(const QCString &cmdName,DocInclude::Type t)
   }
   else if (tok!=TK_WHITESPACE)
   {
-    warn_doc_error(g_fileName,doctokenizerYYlineno,"expected whitespace after %s command",
-        qPrint(cmdName));
+    warn_doc_error(g_fileName,doctokenizerYYlineno,"expected whitespace after \\%s command",
+        qPrint(saveCmdName));
     return;
   }
   doctokenizerYYsetStateFile();
@@ -5234,13 +5220,13 @@ void DocPara::handleInclude(const QCString &cmdName,DocInclude::Type t)
   if (tok==0)
   {
     warn_doc_error(g_fileName,doctokenizerYYlineno,"unexpected end of comment block while parsing the "
-        "argument of command %s",qPrint(cmdName));
+        "argument of command %s",qPrint(saveCmdName));
     return;
   }
   else if (tok!=TK_WORD)
   {
     warn_doc_error(g_fileName,doctokenizerYYlineno,"unexpected token %s as the argument of %s",
-        tokToString(tok),qPrint(cmdName));
+        tokToString(tok),qPrint(saveCmdName));
     return;
   }
   QCString fileName = g_token->name;
@@ -5254,7 +5240,7 @@ void DocPara::handleInclude(const QCString &cmdName,DocInclude::Type t)
     if (tok!=TK_WORD)
     {
       warn_doc_error(g_fileName,doctokenizerYYlineno,"expected block identifier, but found token %s instead while parsing the %s command",
-          tokToString(tok),qPrint(cmdName));
+          tokToString(tok),qPrint(saveCmdName));
       return;
     }
     blockId = "["+g_token->name+"]";
@@ -5288,25 +5274,26 @@ void DocPara::handleInclude(const QCString &cmdName,DocInclude::Type t)
 
 void DocPara::handleSection(const QCString &cmdName)
 {
+  QCString saveCmdName = cmdName;
   // get the argument of the section command.
   int tok=doctokenizerYYlex();
   if (tok!=TK_WHITESPACE)
   {
-    warn_doc_error(g_fileName,doctokenizerYYlineno,"expected whitespace after %s command",
-        qPrint(cmdName));
+    warn_doc_error(g_fileName,doctokenizerYYlineno,"expected whitespace after \\%s command",
+        qPrint(saveCmdName));
     return;
   }
   tok=doctokenizerYYlex();
   if (tok==0)
   {
     warn_doc_error(g_fileName,doctokenizerYYlineno,"unexpected end of comment block while parsing the "
-        "argument of command %s\n", qPrint(cmdName));
+        "argument of command %s\n", qPrint(saveCmdName));
     return;
   }
   else if (tok!=TK_WORD && tok!=TK_LNKWORD)
   {
     warn_doc_error(g_fileName,doctokenizerYYlineno,"unexpected token %s as the argument of %s",
-        tokToString(tok),qPrint(cmdName));
+        tokToString(tok),qPrint(saveCmdName));
     return;
   }
   g_token->sectionId = g_token->name;
@@ -5395,7 +5382,7 @@ int DocPara::handleCommand(const QCString &cmdName, const int tok)
   {
     case CMD_UNKNOWN:
       m_children.append(new DocWord(this,TK_COMMAND_CHAR(tok) + cmdName));
-      warn_doc_error(g_fileName,doctokenizerYYlineno,"Found unknown command `\\%s'",qPrint(cmdName));
+      warn_doc_error(g_fileName,doctokenizerYYlineno,"Found unknown command '\\%s'",qPrint(cmdName));
       break;
     case CMD_EMPHASIS:
       m_children.append(new DocStyleChange(this,g_nodeStack.count(),DocStyleChange::Italic,TRUE));
@@ -5941,8 +5928,14 @@ int DocPara::handleHtmlStartTag(const QCString &tagName,const HtmlAttribList &ta
     case HTML_STRIKE:
       handleStyleEnter(this,m_children,DocStyleChange::Strike,&g_token->attribs);
       break;
+    case HTML_DEL:
+      handleStyleEnter(this,m_children,DocStyleChange::Del,&g_token->attribs);
+      break;
     case HTML_UNDERLINE:
       handleStyleEnter(this,m_children,DocStyleChange::Underline,&g_token->attribs);
+      break;
+    case HTML_INS:
+      handleStyleEnter(this,m_children,DocStyleChange::Ins,&g_token->attribs);
       break;
     case HTML_CODE:
       if (/*getLanguageFromFileName(g_fileName)==SrcLangExt_CSharp ||*/ g_xmlComment) 
@@ -6356,8 +6349,14 @@ int DocPara::handleHtmlEndTag(const QCString &tagName)
     case HTML_STRIKE:
       handleStyleLeave(this,m_children,DocStyleChange::Strike,"strike");
       break;
+    case HTML_DEL:
+      handleStyleLeave(this,m_children,DocStyleChange::Del,"del");
+      break;
     case HTML_UNDERLINE:
       handleStyleLeave(this,m_children,DocStyleChange::Underline,"u");
+      break;
+    case HTML_INS:
+      handleStyleLeave(this,m_children,DocStyleChange::Ins,"ins");
       break;
     case HTML_CODE:
       handleStyleLeave(this,m_children,DocStyleChange::Code,"code");
@@ -6881,54 +6880,55 @@ int DocSection::parse()
 
   //printf("m_level=%d <-> %d\n",m_level,Doxygen::subpageNestingLevel);
 
-  if (retval==RetVal_Subsection && m_level==Doxygen::subpageNestingLevel+1)
+  while (true)
   {
-    // then parse any number of nested sections
-    while (retval==RetVal_Subsection) // more sections follow
+    if (retval==RetVal_Subsection && m_level<=Doxygen::subpageNestingLevel+1)
     {
-      //SectionInfo *sec=Doxygen::sectionDict[g_token->sectionId];
-      DocSection *s=new DocSection(this,
-          QMIN(2+Doxygen::subpageNestingLevel,5),g_token->sectionId);
-      m_children.append(s);
-      retval = s->parse();
+      // then parse any number of nested sections
+      while (retval==RetVal_Subsection) // more sections follow
+      {
+        //SectionInfo *sec=Doxygen::sectionDict[g_token->sectionId];
+        DocSection *s=new DocSection(this,
+            QMIN(2+Doxygen::subpageNestingLevel,5),g_token->sectionId);
+        m_children.append(s);
+        retval = s->parse();
+      }
+      break;
     }
-  }
-  else if (retval==RetVal_Subsubsection && m_level==Doxygen::subpageNestingLevel+2)
-  {
-    // then parse any number of nested sections
-    while (retval==RetVal_Subsubsection) // more sections follow
+    else if (retval==RetVal_Subsubsection && m_level<=Doxygen::subpageNestingLevel+2)
     {
-      //SectionInfo *sec=Doxygen::sectionDict[g_token->sectionId];
-      DocSection *s=new DocSection(this,
-          QMIN(3+Doxygen::subpageNestingLevel,5),g_token->sectionId);
-      m_children.append(s);
-      retval = s->parse();
+      if ((m_level<=1+Doxygen::subpageNestingLevel) && !QString(g_token->sectionId).startsWith("autotoc_md"))
+          warn_doc_error(g_fileName,doctokenizerYYlineno,"Unexpected subsubsection command found inside %s!",sectionLevelToName[m_level]);
+      // then parse any number of nested sections
+      while (retval==RetVal_Subsubsection) // more sections follow
+      {
+        //SectionInfo *sec=Doxygen::sectionDict[g_token->sectionId];
+        DocSection *s=new DocSection(this,
+            QMIN(3+Doxygen::subpageNestingLevel,5),g_token->sectionId);
+        m_children.append(s);
+        retval = s->parse();
+      }
+      if (!(m_level<Doxygen::subpageNestingLevel+2 && retval == RetVal_Subsection)) break;
     }
-  }
-  else if (retval==RetVal_Paragraph && m_level==QMIN(5,Doxygen::subpageNestingLevel+3))
-  {
-    // then parse any number of nested sections
-    while (retval==RetVal_Paragraph) // more sections follow
+    else if (retval==RetVal_Paragraph && m_level<=QMIN(5,Doxygen::subpageNestingLevel+3))
     {
-      //SectionInfo *sec=Doxygen::sectionDict[g_token->sectionId];
-      DocSection *s=new DocSection(this,
-          QMIN(4+Doxygen::subpageNestingLevel,5),g_token->sectionId);
-      m_children.append(s);
-      retval = s->parse();
+      if ((m_level<=2+Doxygen::subpageNestingLevel) && !QString(g_token->sectionId).startsWith("autotoc_md"))
+        warn_doc_error(g_fileName,doctokenizerYYlineno,"Unexpected paragraph command found inside %s!",sectionLevelToName[m_level]);
+      // then parse any number of nested sections
+      while (retval==RetVal_Paragraph) // more sections follow
+      {
+        //SectionInfo *sec=Doxygen::sectionDict[g_token->sectionId];
+        DocSection *s=new DocSection(this,
+            QMIN(4+Doxygen::subpageNestingLevel,5),g_token->sectionId);
+        m_children.append(s);
+        retval = s->parse();
+      }
+      if (!(m_level<Doxygen::subpageNestingLevel+3 && (retval == RetVal_Subsection || retval == RetVal_Subsubsection))) break; 
     }
-  }
-  else if ((m_level<=1+Doxygen::subpageNestingLevel && retval==RetVal_Subsubsection) ||
-           (m_level<=2+Doxygen::subpageNestingLevel && retval==RetVal_Paragraph)
-          )
-  {
-    int level = (retval==RetVal_Subsubsection) ? 3 : 4;
-    warn_doc_error(g_fileName,doctokenizerYYlineno,"Unexpected %s "
-            "command found inside %s!",
-            sectionLevelToName[level],sectionLevelToName[m_level]);
-    retval=0; // stop parsing
-  }
-  else
-  {
+    else
+    {
+      break;
+    }
   }
 
   INTERNAL_ASSERT(retval==0 || 
@@ -7036,7 +7036,7 @@ void DocText::parse()
             m_children.append(new DocSymbol(this,DocSymbol::Sym_Equal));
             break;
           default:
-            warn_doc_error(g_fileName,doctokenizerYYlineno,"Unexpected command `%s' found",
+            warn_doc_error(g_fileName,doctokenizerYYlineno,"Unexpected command '%s' found",
                       qPrint(g_token->name));
             break;
         }
@@ -7082,21 +7082,96 @@ void DocRoot::parse()
     {
       delete par;
     }
+    if (retval==RetVal_Paragraph)
+    {
+      if (!QString(g_token->sectionId).startsWith("autotoc_md"))
+         warn_doc_error(g_fileName,doctokenizerYYlineno,"found paragraph command outside of subsubsection context!");
+      while (retval==RetVal_Paragraph)
+      {
+        if (!g_token->sectionId.isEmpty())
+        {
+          SectionInfo *sec=Doxygen::sectionDict->find(g_token->sectionId);
+          if (sec)
+          {
+            DocSection *s=new DocSection(this,
+                QMIN(4+Doxygen::subpageNestingLevel,5),g_token->sectionId);
+            m_children.append(s);
+            retval = s->parse();
+          }
+          else
+          {
+            warn_doc_error(g_fileName,doctokenizerYYlineno,"Invalid paragraph id '%s'; ignoring paragraph",qPrint(g_token->sectionId));
+            retval = 0;
+          }
+        }
+        else
+        {
+          warn_doc_error(g_fileName,doctokenizerYYlineno,"Missing id for paragraph; ignoring paragraph");
+          retval = 0;
+        }
+      }
+    }
+    if (retval==RetVal_Subsubsection)
+    {
+      if (!(QString(g_token->sectionId).startsWith("autotoc_md")))
+        warn_doc_error(g_fileName,doctokenizerYYlineno,"found subsubsection command outside of subsection context!");
+      while (retval==RetVal_Subsubsection)
+      {
+        if (!g_token->sectionId.isEmpty())
+        {
+          SectionInfo *sec=Doxygen::sectionDict->find(g_token->sectionId);
+          if (sec)
+          {
+            DocSection *s=new DocSection(this,
+                QMIN(3+Doxygen::subpageNestingLevel,5),g_token->sectionId);
+            m_children.append(s);
+            retval = s->parse();
+          }
+          else
+          {
+            warn_doc_error(g_fileName,doctokenizerYYlineno,"Invalid subsubsection id '%s'; ignoring subsubsection",qPrint(g_token->sectionId));
+            retval = 0;
+          }
+        }
+        else
+        {
+          warn_doc_error(g_fileName,doctokenizerYYlineno,"Missing id for subsubsection; ignoring subsubsection");
+          retval = 0;
+        }
+      }
+    }
+    if (retval==RetVal_Subsection)
+    {
+      if (!(QString(g_token->sectionId).startsWith("autotoc_md")))
+        warn_doc_error(g_fileName,doctokenizerYYlineno,"found subsection command outside of section context!");
+      while (retval==RetVal_Subsection)
+      {
+        if (!g_token->sectionId.isEmpty())
+        {
+          SectionInfo *sec=Doxygen::sectionDict->find(g_token->sectionId);
+          if (sec)
+          {
+            DocSection *s=new DocSection(this,
+                QMIN(2+Doxygen::subpageNestingLevel,5),g_token->sectionId);
+            m_children.append(s);
+            retval = s->parse();
+          }
+          else
+          {
+            warn_doc_error(g_fileName,doctokenizerYYlineno,"Invalid subsection id '%s'; ignoring subsection",qPrint(g_token->sectionId));
+            retval = 0;
+          }
+        }
+        else
+        {
+          warn_doc_error(g_fileName,doctokenizerYYlineno,"Missing id for subsection; ignoring subsection");
+          retval = 0;
+        }
+      }
+    }
     if (retval==TK_LISTITEM)
     {
       warn_doc_error(g_fileName,doctokenizerYYlineno,"Invalid list item found");
-    }
-    else if (retval==RetVal_Subsection)
-    {
-      warn_doc_error(g_fileName,doctokenizerYYlineno,"found subsection command outside of section context!");
-    }
-    else if (retval==RetVal_Subsubsection)
-    {
-      warn_doc_error(g_fileName,doctokenizerYYlineno,"found subsubsection command outside of subsection context!");
-    }
-    else if (retval==RetVal_Paragraph)
-    {
-      warn_doc_error(g_fileName,doctokenizerYYlineno,"found paragraph command outside of subsubsection context!");
     }
     if (retval==RetVal_Internal)
     {
@@ -7111,17 +7186,25 @@ void DocRoot::parse()
   // then parse any number of level1 sections
   while (retval==RetVal_Section)
   {
-    SectionInfo *sec=Doxygen::sectionDict->find(g_token->sectionId);
-    if (sec)
+    if (!g_token->sectionId.isEmpty())
     {
-      DocSection *s=new DocSection(this,
-          QMIN(1+Doxygen::subpageNestingLevel,5),g_token->sectionId);
-      m_children.append(s);
-      retval = s->parse();
+      SectionInfo *sec=Doxygen::sectionDict->find(g_token->sectionId);
+      if (sec)
+      {
+        DocSection *s=new DocSection(this,
+            QMIN(1+Doxygen::subpageNestingLevel,5),g_token->sectionId);
+        m_children.append(s);
+        retval = s->parse();
+      }
+      else
+      {
+        warn_doc_error(g_fileName,doctokenizerYYlineno,"Invalid section id '%s'; ignoring section",qPrint(g_token->sectionId));
+        retval = 0;
+      }
     }
     else
     {
-      warn_doc_error(g_fileName,doctokenizerYYlineno,"Invalid section id `%s'; ignoring section",qPrint(g_token->sectionId));
+      warn_doc_error(g_fileName,doctokenizerYYlineno,"Missing id for section; ignoring section");
       retval = 0;
     }
   }
@@ -7611,6 +7694,8 @@ DocRoot *validatingParseDoc(const char *fileName,int startLine,
   g_exampleName = exampleName;
   g_hasParamCommand = FALSE;
   g_hasReturnCommand = FALSE;
+  g_retvalsFound.setAutoDelete(FALSE);
+  g_retvalsFound.clear();
   g_paramsFound.setAutoDelete(FALSE);
   g_paramsFound.clear();
   g_sectionDict = 0; //sections;
@@ -7681,6 +7766,8 @@ DocText *validatingParseText(const char *input)
   g_exampleName = "";
   g_hasParamCommand = FALSE;
   g_hasReturnCommand = FALSE;
+  g_retvalsFound.setAutoDelete(FALSE);
+  g_retvalsFound.clear();
   g_paramsFound.setAutoDelete(FALSE);
   g_paramsFound.clear();
   g_searchUrl="";

@@ -147,30 +147,30 @@ static DocCmdMap docCmdMap[] =
   // command name      handler function         ends brief description
   { "brief",           &handleBrief,            FALSE },
   { "short",           &handleBrief,            FALSE },
-  { "fn",              &handleFn,               FALSE },
-  { "var",             &handleFn,               FALSE },
-  { "typedef",         &handleFn,               FALSE },
-  { "property",        &handleFn,               FALSE },
-  { "def",             &handleDef,              FALSE },
+  { "fn",              &handleFn,               TRUE },
+  { "var",             &handleFn,               TRUE },
+  { "typedef",         &handleFn,               TRUE },
+  { "property",        &handleFn,               TRUE },
+  { "def",             &handleDef,              TRUE },
   { "overload",        &handleOverload,         FALSE },
-  { "enum",            &handleEnum,             FALSE },
-  { "defgroup",        &handleDefGroup,         FALSE },
-  { "addtogroup",      &handleAddToGroup,       FALSE },
-  { "weakgroup",       &handleWeakGroup,        FALSE },
-  { "namespace",       &handleNamespace,        FALSE },
-  { "package",         &handlePackage,          FALSE },
-  { "class",           &handleClass,            FALSE },
+  { "enum",            &handleEnum,             TRUE },
+  { "defgroup",        &handleDefGroup,         TRUE },
+  { "addtogroup",      &handleAddToGroup,       TRUE },
+  { "weakgroup",       &handleWeakGroup,        TRUE },
+  { "namespace",       &handleNamespace,        TRUE },
+  { "package",         &handlePackage,          TRUE },
+  { "class",           &handleClass,            TRUE },
   { "headerfile",      &handleHeaderFile,       FALSE },
-  { "protocol",        &handleProtocol,         FALSE },
-  { "category",        &handleCategory,         FALSE },
-  { "union",           &handleUnion,            FALSE },
-  { "struct",          &handleStruct,           FALSE },
-  { "interface",       &handleInterface,        FALSE },
-  { "idlexcept",       &handleIdlException,     FALSE },
-  { "page",            &handlePage,             FALSE },
-  { "mainpage",        &handleMainpage,         FALSE },
-  { "file",            &handleFile,             FALSE },
-  { "dir",             &handleDir,              FALSE },
+  { "protocol",        &handleProtocol,         TRUE },
+  { "category",        &handleCategory,         TRUE },
+  { "union",           &handleUnion,            TRUE },
+  { "struct",          &handleStruct,           TRUE },
+  { "interface",       &handleInterface,        TRUE },
+  { "idlexcept",       &handleIdlException,     TRUE },
+  { "page",            &handlePage,             TRUE },
+  { "mainpage",        &handleMainpage,         TRUE },
+  { "file",            &handleFile,             TRUE },
+  { "dir",             &handleDir,              TRUE },
   { "example",         &handleExample,          FALSE },
   { "details",         &handleDetails,          TRUE  },
   { "name",            &handleName,             FALSE },
@@ -210,7 +210,7 @@ static DocCmdMap docCmdMap[] =
   { "elseif",          &handleElseIf,           FALSE },
   { "else",            &handleElse,             FALSE },
   { "endif",           &handleEndIf,            FALSE },
-  { "ingroup",         &handleIngroup,          FALSE },
+  { "ingroup",         &handleIngroup,          TRUE },
   { "nosubgrouping",   &handleNoSubGrouping,    FALSE },
   { "showinitializer", &handleShowInitializer,  FALSE },
   { "hideinitializer", &handleHideInitializer,  FALSE },
@@ -386,11 +386,6 @@ class GuardedSection
     bool m_parentVisible;
 };
 
-void openGroup(Entry *e,const char *file,int line);
-void closeGroup(Entry *e,const char *file,int line,bool foundInline=FALSE);
-void initGroupInfo(Entry *e);
-static void groupAddDocs(Entry *e);
-
 /* -----------------------------------------------------------------
  *
  *	statics
@@ -451,20 +446,11 @@ static bool             g_insideParBlock;
 
 //-----------------------------------------------------------------------------
 
-static QStack<Grouping> g_autoGroupStack;
-static int              g_memberGroupId = DOX_NOGROUP;
-static QCString         g_memberGroupHeader;
-static QCString         g_memberGroupDocs;
-static QCString         g_memberGroupRelates;
-static QCString         g_compoundName;
-
-//-----------------------------------------------------------------------------
-
 static void initParser()
 {
   g_sectionLabel.resize(0);
   g_sectionTitle.resize(0);
-  g_memberGroupHeader.resize(0);
+  Doxygen::docGroup.clearHeader();
   g_insideParBlock = FALSE;
 }
 
@@ -826,6 +812,10 @@ static inline void setOutput(OutputContext ctx)
       }
       else
       {
+        if (!current->doc.isEmpty()) // when appending parts add a new line
+        {
+          current->doc += "\n";
+        }
         pOutputString = &current->doc;
 	inContext = OutputDoc; // need to switch to detailed docs, see bug 631380
       }
@@ -1218,12 +1208,12 @@ RCSTAG    "$"{ID}":"[^\n$]+"$"
   					}
 <Comment>{B}*{CMD}"{"                   { // begin of a group
                                           //langParser->handleGroupStartCommand(g_memberGroupHeader);
-                                          openGroup(current,yyFileName,yyLineNr);
+                                          Doxygen::docGroup.open(current,yyFileName,yyLineNr);
                                         }
 <Comment>{B}*{CMD}"}"                   { // end of a group
                                           //langParser->handleGroupEndCommand();
-                                          closeGroup(current,yyFileName,yyLineNr,TRUE);
-                                          g_memberGroupHeader.resize(0);
+                                          Doxygen::docGroup.close(current,yyFileName,yyLineNr,TRUE);
+					  Doxygen::docGroup.clearHeader();
 					  parseMore=TRUE;
                                           needNewEntry = TRUE;
 #if YY_FLEX_MAJOR_VERSION>=2 && (YY_FLEX_MINOR_VERSION>5 || (YY_FLEX_MINOR_VERSION==5 && YY_FLEX_SUBMINOR_VERSION>=33))
@@ -1576,7 +1566,7 @@ RCSTAG    "$"{ID}":"[^\n$]+"$"
   					  yyLineNr++; 
 					  addOutput('\n');
                                         }
-<GroupDocArg2>[^\n\*]+			{ // title (stored in type)
+<GroupDocArg2>[^\n\\]+			{ // title (stored in type)
 					  current->type += yytext;
 					  current->type = current->type.stripWhiteSpace();
                                         }
@@ -1594,11 +1584,16 @@ RCSTAG    "$"{ID}":"[^\n$]+"$"
 					  addOutput('\n');
 					  BEGIN( Comment );
   					}
+<GroupDocArg2>.                         { // title (stored in type)
+					  current->type += yytext;
+					  current->type = current->type.stripWhiteSpace();
+                                        }
 
   /* --------- handle arguments of page/mainpage command ------------------- */
 
 <PageDocArg1>{FILE}			{ // first argument; page name
 					  current->name = stripQuotes(yytext);
+					  current->args = "";
 					  BEGIN( PageDocArg2 ); 
 					}
 <PageDocArg1>{LC}			{ yyLineNr++; 
@@ -1615,17 +1610,21 @@ RCSTAG    "$"{ID}":"[^\n$]+"$"
   					}
 <PageDocArg1>.				{ // ignore other stuff
   					}
-<PageDocArg2>.*"\n"			{ // second argument; page title
-					  yyLineNr++;
+<PageDocArg2>{DOCNL}			{ // second argument; page title
+					  if (*yytext=='\n') yyLineNr++;
+					  addOutput('\n');
+					  BEGIN( Comment );
+					}
+<PageDocArg2>{CMD}[<>]       		{ 
 					  // bug 748927
 					  QCString tmp = yytext;
 					  tmp = substitute(substitute(tmp,"@<","&lt;"),"@>","&gt;");
 					  tmp = substitute(substitute(tmp,"\\<","&lt;"),"\\>","&gt;");
-					  current->args = tmp;
-					  addOutput('\n');
-					  BEGIN( Comment );
+					  current->args += tmp;
 					}
-
+<PageDocArg2>.				{ 
+					  current->args += yytext;
+                                        }
   /* --------- handle arguments of the param command ------------ */
 <ParamArg1>{ID}/{B}*","                 {
                                           addOutput(yytext);
@@ -1895,17 +1894,20 @@ RCSTAG    "$"{ID}":"[^\n$]+"$"
 					  addOutput('\n');
   					}
 <FormatBlock>"/*"			{ // start of a C-comment
-  					  g_commentCount++;
+					  if (!(blockName=="code" || blockName=="verbatim")) g_commentCount++;
   					  addOutput(yytext);
   					}
 <FormatBlock>"*/"			{ // end of a C-comment
   					  addOutput(yytext);
-  					  g_commentCount--;
-					  if (g_commentCount<0 && blockName!="verbatim")
-					  {
-					    warn(yyFileName,yyLineNr,
+					  if (!(blockName=="code" || blockName=="verbatim"))
+                                          {
+                                            g_commentCount--;
+					    if (g_commentCount<0)
+					    {
+					      warn(yyFileName,yyLineNr,
 					         "found */ without matching /* while inside a \\%s block! Perhaps a missing \\end%s?\n",blockName.data(),blockName.data());
-					  }
+					    }
+  					  }
   					}
 <FormatBlock>.				{
   					  addOutput(*yytext);
@@ -1965,6 +1967,7 @@ RCSTAG    "$"{ID}":"[^\n$]+"$"
   					  addOutput(*yytext);
   					}
 <GuardParamEnd>{B}*{DOCNL}		{
+  					  lineCount();
   					  g_spaceBeforeIf.resize(0);
   					  BEGIN(Comment);
   					}
@@ -2119,10 +2122,10 @@ RCSTAG    "$"{ID}":"[^\n$]+"$"
 <NameParam>{LC}				{ // line continuation
                                           yyLineNr++; 
 					  addOutput('\n');
-					  g_memberGroupHeader+=' ';
+					  Doxygen::docGroup.appendHeader(' ');
   					}
 <NameParam>.				{ // ignore other stuff
-					  g_memberGroupHeader+=*yytext;
+					  Doxygen::docGroup.appendHeader(*yytext);
 					  current->name+=*yytext;
   					}
 
@@ -2298,7 +2301,7 @@ RCSTAG    "$"{ID}":"[^\n$]+"$"
   					  if (*yytext=='\n') yyLineNr++;
 					  addOutput('\n');
 					  setOutput(OutputDoc);
-                                          addOutput("\\copydetails ");
+                                          addOutput(" \\copydetails ");
 					  addOutput(g_copyDocArg);
 					  addOutput("\n");
 					  BEGIN(Comment);
@@ -2359,6 +2362,7 @@ static bool handleDefGroup(const QCString &, const QCStringList &)
 {
   bool stop=makeStructuralIndicator(Entry::GROUPDOC_SEC);
   current->groupDocType = Entry::GROUPDOC_NORMAL;
+  setOutput(OutputBrief);
   BEGIN( GroupDocArg1 );
   return stop;
 }
@@ -2462,6 +2466,7 @@ static bool handleMainpage(const QCString &, const QCStringList &)
   {
     current->name = "mainpage";
   }
+  current->name = "";
   BEGIN( PageDocArg2 );
   return stop;
 }
@@ -2540,11 +2545,11 @@ static bool handleName(const QCString &, const QCStringList &)
   bool stop=makeStructuralIndicator(Entry::MEMBERGRP_SEC);
   if (!stop)
   {
-    g_memberGroupHeader.resize(0);
+    Doxygen::docGroup.clearHeader();
     BEGIN( NameParam );
-    if (g_memberGroupId!=DOX_NOGROUP) // end of previous member group
+    if (!Doxygen::docGroup.isEmpty()) // end of previous member group
     {
-      closeGroup(current,yyFileName,yyLineNr,TRUE);
+      Doxygen::docGroup.close(current,yyFileName,yyLineNr,TRUE,true);
     }
   }
   return stop;
@@ -2972,7 +2977,7 @@ static bool handleToc(const QCString &, const QCStringList &optList)
       {
         if (sscanf(opt.right(opt.length() - i - 1).data(),"%d%c",&level,&dum) != 1)
         {
-          warn(yyFileName,yyLineNr,"Unknown option:level specified with \\tableofcontents: `%s'", (*it).stripWhiteSpace().data());
+          warn(yyFileName,yyLineNr,"Unknown option:level specified with \\tableofcontents: '%s'", (*it).stripWhiteSpace().data());
           opt = "";
         }
         else
@@ -3002,7 +3007,7 @@ static bool handleToc(const QCString &, const QCStringList &optList)
         }
         else
         {
-          warn(yyFileName,yyLineNr,"Unknown option specified with \\tableofcontents: `%s'", (*it).stripWhiteSpace().data());
+          warn(yyFileName,yyLineNr,"Unknown option specified with \\tableofcontents: '%s'", (*it).stripWhiteSpace().data());
         }
       }
     }
@@ -3145,6 +3150,10 @@ bool parseCommentBlock(/* in */     ParserInterface *parser,
   parseMore      = FALSE;
   inBody         = isInbody;
   outputXRef.resize(0);
+  if (!isBrief && !isAutoBriefOn && !current->doc.isEmpty())
+  { // add newline separator between detailed comment blocks
+    current->doc += '\n';
+  }
   setOutput( isBrief || isAutoBriefOn ? OutputBrief : OutputDoc );
   briefEndsAtDot = isAutoBriefOn;
   g_condCount    = 0;
@@ -3192,9 +3201,9 @@ bool parseCommentBlock(/* in */     ParserInterface *parser,
   }
 
   if (current->section==Entry::MEMBERGRP_SEC &&
-      g_memberGroupId==DOX_NOGROUP) // @name section but no group started yet
+      Doxygen::docGroup.isEmpty()) // @name section but no group started yet
   {
-    openGroup(current,yyFileName,yyLineNr);
+    Doxygen::docGroup.open(current,yyFileName,yyLineNr,true);
   }
 
   Debug::print(Debug::CommentScan,0,"-----------\nCommentScanner: %s:%d\noutput=[\n"
@@ -3208,7 +3217,7 @@ bool parseCommentBlock(/* in */     ParserInterface *parser,
   checkFormula();
   prot = protection;
   
-  groupAddDocs(curEntry);
+  Doxygen::docGroup.addDocs(curEntry);
 
   newEntryNeeded = needNewEntry;
 
@@ -3225,185 +3234,6 @@ bool parseCommentBlock(/* in */     ParserInterface *parser,
 
   printlex(yy_flex_debug, FALSE, __FILE__, fileName ? fileName.data(): NULL);
   return parseMore;
-}
-
-//---------------------------------------------------------------------------
-
-void groupEnterFile(const char *fileName,int)
-{
-  g_autoGroupStack.setAutoDelete(TRUE);
-  g_autoGroupStack.clear();
-  g_memberGroupId = DOX_NOGROUP;
-  g_memberGroupDocs.resize(0);
-  g_memberGroupRelates.resize(0);
-  g_compoundName=fileName;
-}
-
-void groupLeaveFile(const char *fileName,int line)
-{
-  //if (g_memberGroupId!=DOX_NOGROUP)
-  //{
-  //  warn(fileName,line,"end of file while inside a member group\n");
-  //}
-  g_memberGroupId=DOX_NOGROUP;
-  g_memberGroupRelates.resize(0);
-  g_memberGroupDocs.resize(0);
-  if (!g_autoGroupStack.isEmpty())
-  {
-    warn(fileName,line,"end of file while inside a group\n");
-  }
-}
-
-void groupEnterCompound(const char *fileName,int line,const char *name)
-{
-  if (g_memberGroupId!=DOX_NOGROUP)
-  {
-    warn(fileName,line,"try to put compound %s inside a member group\n",name);
-  }
-  g_memberGroupId=DOX_NOGROUP;
-  g_memberGroupRelates.resize(0);
-  g_memberGroupDocs.resize(0);
-  g_compoundName = name;
-  int i = g_compoundName.find('(');
-  if (i!=-1) 
-  {
-    g_compoundName=g_compoundName.left(i); // strip category (Obj-C)
-  }
-  if (g_compoundName.isEmpty())
-  {
-    g_compoundName=fileName;
-  }
-  //printf("groupEnterCompound(%s)\n",name);
-}
-
-void groupLeaveCompound(const char *,int,const char * /*name*/)
-{
-  //printf("groupLeaveCompound(%s)\n",name);
-  //if (g_memberGroupId!=DOX_NOGROUP)
-  //{
-  //  warn(fileName,line,"end of compound %s while inside a member group\n",name);
-  //}
-  g_memberGroupId=DOX_NOGROUP;
-  g_memberGroupRelates.resize(0);
-  g_memberGroupDocs.resize(0);
-  g_compoundName.resize(0);
-}
-
-static int findExistingGroup(int &groupId,const MemberGroupInfo *info)
-{
-  //printf("findExistingGroup %s:%s\n",info->header.data(),info->compoundName.data());
-  QIntDictIterator<MemberGroupInfo> di(Doxygen::memGrpInfoDict);
-  MemberGroupInfo *mi;
-  for (di.toFirst();(mi=di.current());++di)
-  {
-    if (g_compoundName==mi->compoundName &&  // same file or scope
-	!mi->header.isEmpty() &&             // not a nameless group
-	qstricmp(mi->header,info->header)==0  // same header name
-       )
-    {
-      //printf("Found it!\n");
-      return (int)di.currentKey(); // put the item in this group
-    }
-  }
-  groupId++; // start new group
-  return groupId;
-}
-
-void openGroup(Entry *e,const char *,int)
-{
-  //printf("==> openGroup(name=%s,sec=%x) g_autoGroupStack=%d\n",
-  //  	e->name.data(),e->section,g_autoGroupStack.count());
-  if (e->section==Entry::GROUPDOC_SEC) // auto group
-  {
-    g_autoGroupStack.push(new Grouping(e->name,e->groupingPri()));
-  }
-  else // start of a member group
-  {
-    //printf("    membergroup id=%d %s\n",g_memberGroupId,g_memberGroupHeader.data());
-    if (g_memberGroupId==DOX_NOGROUP) // no group started yet
-    {
-      static int curGroupId=0;
-
-      MemberGroupInfo *info = new MemberGroupInfo;
-      info->header = g_memberGroupHeader.stripWhiteSpace();
-      info->compoundName = g_compoundName;
-      g_memberGroupId = findExistingGroup(curGroupId,info);
-      //printf("    use membergroup %d\n",g_memberGroupId);
-      Doxygen::memGrpInfoDict.insert(g_memberGroupId,info);
-
-      g_memberGroupRelates = e->relates;
-      e->mGrpId = g_memberGroupId;
-    }
-  }
-}
-
-void closeGroup(Entry *e,const char *fileName,int line,bool foundInline)
-{
-  //printf("==> closeGroup(name=%s,sec=%x,file=%s,line=%d) g_autoGroupStack=%d\n",
-  //    e->name.data(),e->section,fileName,line,g_autoGroupStack.count());
-  if (g_memberGroupId!=DOX_NOGROUP) // end of member group
-  {
-    MemberGroupInfo *info=Doxygen::memGrpInfoDict.find(g_memberGroupId);
-    if (info) // known group
-    {
-      info->doc = g_memberGroupDocs;
-      info->docFile = fileName;
-      info->docLine = line;
-    }
-    g_memberGroupId=DOX_NOGROUP;
-    g_memberGroupRelates.resize(0);
-    g_memberGroupDocs.resize(0);
-    if (!foundInline) e->mGrpId=DOX_NOGROUP;
-    //printf("new group id=%d\n",g_memberGroupId);
-  }
-  else if (!g_autoGroupStack.isEmpty()) // end of auto group
-  {
-    Grouping *grp = g_autoGroupStack.pop();
-    // see bug577005: we should not remove the last group for e
-    if (!foundInline) e->groups->removeLast();
-    //printf("Removing %s e=%p\n",grp->groupname.data(),e);
-    delete grp;
-    if (!foundInline) initGroupInfo(e);
-  }
-}
-
-void initGroupInfo(Entry *e)
-{
-  //printf("==> initGroup(id=%d,related=%s,e=%p)\n",g_memberGroupId,
-  //       g_memberGroupRelates.data(),e);
-  e->mGrpId     = g_memberGroupId;
-  e->relates    = g_memberGroupRelates;
-  if (!g_autoGroupStack.isEmpty())
-  {
-    //printf("Appending group %s to %s: count=%d entry=%p\n",
-    //	g_autoGroupStack.top()->groupname.data(),
-    //	e->name.data(),e->groups->count(),e);
-    e->groups->append(new Grouping(*g_autoGroupStack.top()));
-  }
-}
-
-static void groupAddDocs(Entry *e)
-{
-  if (e->section==Entry::MEMBERGRP_SEC)
-  {
-    g_memberGroupDocs=e->brief.stripWhiteSpace();
-    e->doc = stripLeadingAndTrailingEmptyLines(e->doc,e->docLine);
-    if (!g_memberGroupDocs.isEmpty() && !e->doc.isEmpty())
-    {
-      g_memberGroupDocs+="\n\n";
-    }
-    g_memberGroupDocs+=e->doc;
-    MemberGroupInfo *info=Doxygen::memGrpInfoDict.find(g_memberGroupId);
-    if (info) 
-    {
-      info->doc = g_memberGroupDocs;
-      info->docFile = e->docFile;
-      info->docLine = e->docLine;
-      info->setRefItems(e->sli);
-    }
-    e->doc.resize(0);
-    e->brief.resize(0);
-  }
 }
 
 static void handleGuard(const QCString &expr)

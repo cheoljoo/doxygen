@@ -141,7 +141,8 @@ class DocNode
                 Kind_VhdlFlow       = 50,
                 Kind_ParBlock       = 51,
                 Kind_DiaFile        = 52,
-                Kind_Emoji          = 53
+                Kind_Emoji          = 53,
+                Kind_Sep            = 54
               };
     /*! Creates a new node */
     DocNode() : m_parent(0), m_insidePre(FALSE) {}
@@ -382,7 +383,9 @@ class DocStyleChange : public DocNode
                  Span          = (1<<8),
                  Div           = (1<<9),
                  Strike        = (1<<10),
-                 Underline     = (1<<11)
+                 Underline     = (1<<11),
+                 Del           = (1<<12),
+                 Ins           = (1<<13)
                };
 
     DocStyleChange(DocNode *parent,uint position,Style s,bool enable,
@@ -512,6 +515,19 @@ class DocWhiteSpace : public DocNode
     Kind kind() const          { return Kind_WhiteSpace; }
     QCString chars() const     { return m_chars; }
     void accept(DocVisitor *v) { v->visit(this); }
+  private:
+    QCString  m_chars;
+};
+
+/** Node representing a separator */
+class DocSeparator : public DocNode
+{
+  public:
+    DocSeparator(DocNode *parent,const QCString &chars) :
+      m_chars(chars) { m_parent = parent; }
+    Kind kind() const          { return Kind_Sep; }
+    QCString chars() const     { return m_chars; }
+    void accept(DocVisitor *v) { }
   private:
     QCString  m_chars;
 };
@@ -694,24 +710,6 @@ class DocIndexEntry : public DocNode
 
 //-----------------------------------------------------------------------
 
-/** Node representing a copy of documentation block. */
-class DocCopy : public DocNode
-{
-  public:
-    DocCopy(DocNode *parent,const QCString &link,bool copyBrief,bool copyDetails) 
-      : m_link(link), 
-        m_copyBrief(copyBrief), m_copyDetails(copyDetails) { m_parent = parent; }
-    Kind kind() const          { return Kind_Copy; }
-    QCString link() const       { return m_link; }
-    void accept(DocVisitor * /*v*/) { /*CompAccept<DocCopy>::accept(this,v);*/ }
-    void parse(QList<DocNode> &children);
-
-  private:
-    QCString  m_link;
-    bool     m_copyBrief;
-    bool     m_copyDetails;
-};
-
 /** Node representing an auto List */
 class DocAutoList : public CompAccept<DocAutoList>
 {
@@ -816,7 +814,7 @@ class DocDotFile : public CompAccept<DocDotFile>
 {
   public:
     DocDotFile(DocNode *parent,const QCString &name,const QCString &context);
-    void parse();
+    bool parse();
     Kind kind() const          { return Kind_DotFile; }
     QCString name() const       { return m_name; }
     QCString file() const       { return m_file; }
@@ -839,7 +837,7 @@ class DocMscFile : public CompAccept<DocMscFile>
 {
   public:
     DocMscFile(DocNode *parent,const QCString &name,const QCString &context);
-    void parse();
+    bool parse();
     Kind kind() const          { return Kind_MscFile; }
     QCString name() const      { return m_name; }
     QCString file() const      { return m_file; }
@@ -862,7 +860,7 @@ class DocDiaFile : public CompAccept<DocDiaFile>
 {
   public:
     DocDiaFile(DocNode *parent,const QCString &name,const QCString &context);
-    void parse();
+    bool parse();
     Kind kind() const          { return Kind_DiaFile; }
     QCString name() const      { return m_name; }
     QCString file() const      { return m_file; }
