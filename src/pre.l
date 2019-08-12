@@ -1785,6 +1785,7 @@ CHARLIT   (("'"\\[0-7]{1,3}"'")|("'"\\."'")|("'"[^'\\\n]{1,4}"'"))
   					  BEGIN(CopyLine); 
 					}
 <Start>^{B}*[a-z_A-Z\x80-\xFF][a-z_A-Z0-9\x80-\xFF]+{B}*"("[^\)\n]*")"/{BN}{1,10}*[:{] { // constructors?
+;;printf("<start>constructors %s\n",yytext);
 					  int i;
 					  for (i=(int)yyleng-1;i>=0;i--)
 					  {

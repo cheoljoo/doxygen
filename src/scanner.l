@@ -7183,12 +7183,13 @@ static void parseMain(const char *fileName,
     }
     rt->lang = language;
     msg("Parsing file %s...\n",yyFileName.data());
+    ;;printf("%s\n",__PRETTY_FUNCTION__);
 
     current_root  = rt ;
     initParser();
     groupEnterFile(yyFileName,yyLineNr);
     current       = new Entry;
-    //printf("current=%p current_root=%p\n",current,current_root);
+    printf("current=%p current_root=%p\n",current,current_root);
     int sec=guessSection(yyFileName);
     if (sec)
     {
@@ -7209,7 +7210,9 @@ static void parseMain(const char *fileName,
       BEGIN( FindMembers );
     }
 
+    ;;printf("1 %s\n",__PRETTY_FUNCTION__);
     scannerYYlex();
+    ;;printf("2 %s\n",__PRETTY_FUNCTION__);
     g_lexInit=TRUE;
 
     if (YY_START==Comment)
@@ -7359,6 +7362,7 @@ void CLanguageScanner::parseCode(CodeOutputInterface & codeOutIntf,
                    bool collectXRefs
                   )
 {
+    printf("%s\n",__PRETTY_FUNCTION__);
   ::parseCCode(codeOutIntf,scopeName,input,lang,isExampleBlock,exampleName,
                fileDef,startLine,endLine,inlineFragment,memberDef,
 	       showLineNumbers,searchCtx,collectXRefs);
