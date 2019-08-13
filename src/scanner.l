@@ -7210,9 +7210,9 @@ static void parseMain(const char *fileName,
       BEGIN( FindMembers );
     }
 
-    ;;printf("1 %s\n",__PRETTY_FUNCTION__);
+    ;;printf("scanner.l 1 %s\n",__PRETTY_FUNCTION__);
     scannerYYlex();
-    ;;printf("2 %s\n",__PRETTY_FUNCTION__);
+    ;;printf("scanner.l 2 %s\n",__PRETTY_FUNCTION__);
     g_lexInit=TRUE;
 
     if (YY_START==Comment)

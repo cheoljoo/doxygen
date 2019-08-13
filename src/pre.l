@@ -411,12 +411,12 @@ static void incrLevel()
   g_level++;
   g_levelGuard.resize(g_level);
   g_levelGuard[g_level-1]=FALSE;
-  //printf("%s line %d: incrLevel %d\n",g_yyFileName.data(),g_yyLineNr,g_level);
+  printf("pre.l %s line %d: incrLevel %d\n",g_yyFileName.data(),g_yyLineNr,g_level);
 }
 
 static void decrLevel()
 {
-  //printf("%s line %d: decrLevel %d\n",g_yyFileName.data(),g_yyLineNr,g_level);
+  printf("pre.l %s line %d: decrLevel %d\n",g_yyFileName.data(),g_yyLineNr,g_level);
   if (g_level > 0)
   {
     g_level--;
@@ -555,13 +555,13 @@ static FileState *findFile(const char *fileName,bool localInclude,bool &alreadyI
   while (s)
   {
     QCString absName = (QCString)s+"/"+fileName;
-    //printf("  Looking for %s in %s\n",fileName,s);
+    printf("  Looking for %s in %s\n",fileName,s);
     FileState *fs = checkAndOpenFile(absName,alreadyIncluded);
     if (fs)
     {
       setFileName(absName);
       g_yyLineNr=1;
-      //printf("  -> found it\n");
+      printf("  -> found it\n");
       return fs;
     }
     else if (alreadyIncluded)
@@ -693,7 +693,7 @@ static QCString stringize(const QCString &s)
       }
     }
   }
-  //printf("stringize `%s'->`%s'\n",s.data(),result.data());
+  printf("stringize `%s'->`%s'\n",s.data(),result.data());
   return result;
 }
 
@@ -704,19 +704,19 @@ static QCString stringize(const QCString &s)
  */
 static void processConcatOperators(QCString &expr)
 {
-  //printf("processConcatOperators: in=`%s'\n",expr.data());
+  printf("processConcatOperators: in=`%s'\n",expr.data());
   QRegExp r("[ \\t\\n]*##[ \\t\\n]*"); 
   int l,n,i=0;
   if (expr.isEmpty()) return;
   while ((n=r.match(expr,i,&l))!=-1)
   {
-    //printf("Match: `%s'\n",expr.data()+i);
+    printf("Match: `%s'\n",expr.data()+i);
     if (n+l+1<(int)expr.length() && expr.at(n+l)=='@' && expr.at(n+l+1)=='-')
     {
       // remove no-rescan marker after ID
       l+=2;
     }
-    //printf("found `%s'\n",expr.mid(n,l).data());
+    printf("found `%s'\n",expr.mid(n,l).data());
     // remove the ## operator and the surrounding whitespace
     expr=expr.left(n)+expr.right(expr.length()-n-l);
     int k=n-1;
@@ -729,7 +729,7 @@ static void processConcatOperators(QCString &expr)
     }
     i=n;
   }
-  //printf("processConcatOperators: out=`%s'\n",expr.data());
+  printf("processConcatOperators: out=`%s'\n",expr.data());
 }
 
 static void yyunput (int c,char *buf_ptr  );
@@ -759,7 +759,7 @@ static inline void addTillEndOfString(const QCString &expr,QCString *rest,
  */ 
 static bool replaceFunctionMacro(const QCString &expr,QCString *rest,int pos,int &len,const Define *def,QCString &result)
 {
-  //printf("replaceFunctionMacro(expr=%s,rest=%s,pos=%d,def=%s) level=%d\n",expr.data(),rest ? rest->data() : 0,pos,def->name.data(),g_level);
+  printf("replaceFunctionMacro(expr=%s,rest=%s,pos=%d,def=%s) level=%d\n",expr.data(),rest ? rest->data() : 0,pos,def->name.data(),g_level);
   uint j=pos;
   len=0;
   result.resize(0);
@@ -898,7 +898,7 @@ static bool replaceFunctionMacro(const QCString &expr,QCString *rest,int pos,int
     // substitution of all formal arguments
     QCString resExpr;
     const QCString d=def->definition.stripWhiteSpace();
-    //printf("Macro definition: %s\n",d.data());
+    printf("Macro definition: %s\n",d.data());
     bool inString=FALSE;
     while (k<d.length())
     {
@@ -984,8 +984,8 @@ static bool replaceFunctionMacro(const QCString &expr,QCString *rest,int pos,int
     }
     len=j-pos;
     result=resExpr;
-    //printf("result after substitution `%s' expr=`%s'\n",
-    //       result.data(),expr.mid(pos,len).data());
+    printf("result after substitution `%s' expr=`%s'\n",
+           result.data(),expr.mid(pos,len).data());
     return TRUE;
   }
   return FALSE;
@@ -1352,10 +1352,10 @@ bool computeExpression(const QCString &expr)
 {
   QCString e=expr;
   expandExpression(e,0,0);
-  //printf("after expansion `%s'\n",e.data());
+  printf("after expansion `%s'\n",e.data());
   e = removeIdsAndMarkers(e);
   if (e.isEmpty()) return FALSE;
-  //printf("parsing `%s'\n",e.data());
+  printf("parsing `%s'\n",e.data());
   return parseconstexp(g_yyFileName,g_yyLineNr,e);
 }
 
@@ -1383,9 +1383,9 @@ Define *newDefine()
   def->lineNr     = g_yyLineNr-g_yyMLines;
   def->columnNr   = g_yyColNr;
   def->varArgs    = g_defVarArgs;
-  //printf("newDefine: %s %s file: %s\n",def->name.data(),def->definition.data(),
-  //    def->fileDef ? def->fileDef->name().data() : def->fileName.data());
-  //printf("newDefine: `%s'->`%s'\n",def->name.data(),def->definition.data());
+  printf("newDefine: %s %s file: %s\n",def->name.data(),def->definition.data(),
+      def->fileDef ? def->fileDef->name().data() : def->fileName.data());
+  printf("newDefine: `%s'->`%s'\n",def->name.data(),def->definition.data());
   if (!def->name.isEmpty() && Doxygen::expandAsDefinedDict[def->name])
   {
     def->isPredefined=TRUE;
@@ -1399,7 +1399,7 @@ void addDefine()
                       // conditional section (cond command) that is disabled.
   if (!Doxygen::gatherDefines) return;
 
-  //printf("addDefine %s %s\n",g_defName.data(),g_defArgsStr.data());
+  printf("addDefine %s %s\n",g_defName.data(),g_defArgsStr.data());
   //ArgumentList *al = new ArgumentList;
   //stringToArgumentList(g_defArgsStr,al);
   MemberDef *md=new MemberDef(
@@ -1431,7 +1431,7 @@ void addDefine()
   }
   md->setInitializer(g_defLitText.stripWhiteSpace());
 
-  //printf("pre.l: md->setFileDef(%p)\n",g_inputFileDef);
+  printf("pre.l: md->setFileDef(%p)\n",g_inputFileDef);
   md->setFileDef(g_inputFileDef);
   md->setDefinition("#define "+g_defName);
 
@@ -1640,7 +1640,7 @@ static void readIncludeFile(const QCString &inc)
 
 static void startCondSection(const char *sectId)
 {
-  //printf("startCondSection: skip=%d stack=%d\n",g_skip,g_condStack.count());
+  printf("startCondSection: skip=%d stack=%d\n",g_skip,g_condStack.count());
   CondParser prs;
   bool expResult = prs.parse(g_yyFileName,g_yyLineNr,sectId);
   g_condStack.push(new CondCtx(g_yyLineNr,sectId,g_skip));
@@ -1648,7 +1648,7 @@ static void startCondSection(const char *sectId)
   {
     g_skip=TRUE;
   }
-  //printf("  expResult=%d skip=%d\n",expResult,g_skip);
+  printf("  expResult=%d skip=%d\n",expResult,g_skip);
 }
 
 static void endCondSection()
@@ -1663,7 +1663,7 @@ static void endCondSection()
     g_skip=ctx->skip;
     delete ctx;
   }
-  //printf("endCondSection: skip=%d stack=%d\n",g_skip,g_condStack.count());
+  printf("endCondSection: skip=%d stack=%d\n",g_skip,g_condStack.count());
 }
 
 static void forceEndCondSection()
@@ -1795,6 +1795,7 @@ CHARLIT   (("'"\\[0-7]{1,3}"'")|("'"\\."'")|("'"[^'\\\n]{1,4}"'"))
                                         }
 <Start>^{B}*[_A-Z][_A-Z0-9]+{B}*"("[^\(\)\n]*"("[^\)\n]*")"[^\)\n]*")"{B}*\n | // function list macro with one (...) argument, e.g. for K_GLOBAL_STATIC_WITH_ARGS
 <Start>^{B}*[_A-Z][_A-Z0-9]+{B}*"("[^\)\n]*")"{B}*\n { // function like macro
+;;printf("<start>function like macro %s\n",yytext);
   					  static bool skipFuncMacros = Config_getBool(SKIP_FUNCTION_MACROS);
 					  QCString name(yytext);
 					  name=name.left(name.find('(')).stripWhiteSpace();
@@ -1825,11 +1826,13 @@ CHARLIT   (("'"\\[0-7]{1,3}"'")|("'"\\."'")|("'"[^'\\\n]{1,4}"'"))
 					  }
   					}
 <CopyLine>"extern"{BN}{0,80}"\"C\""*{BN}{0,80}"{"	{
+;;printf("<CopyLine>extern %s\n",yytext);
                                           QCString text=yytext;
   					  g_yyLineNr+=text.contains('\n');
 					  outputArray(yytext,(int)yyleng);
   					}
 <CopyLine>"{"				{ // count brackets inside the main file
+;;printf("<CopyLine>{ %s\n",yytext);
   					  if (g_includeStack.isEmpty()) 
 					  {
 					    g_curlyCount++;
@@ -1837,6 +1840,7 @@ CHARLIT   (("'"\\[0-7]{1,3}"'")|("'"\\."'")|("'"[^'\\\n]{1,4}"'"))
 					  outputChar(*yytext);
   					}
 <CopyLine>"}"				{ // count brackets inside the main file
+;;printf("<CopyLine>} %s\n",yytext);
   					  if (g_includeStack.isEmpty() && g_curlyCount>0) 
 					  {
 					    g_curlyCount--;
@@ -1844,20 +1848,25 @@ CHARLIT   (("'"\\[0-7]{1,3}"'")|("'"\\."'")|("'"[^'\\\n]{1,4}"'"))
 					  outputChar(*yytext);
   					}
 <CopyLine>"'"\\[0-7]{1,3}"'"		{ 
+;;printf("<CopyLine>01 %s\n",yytext);
   					  outputArray(yytext,(int)yyleng);
 					}
 <CopyLine>"'"\\."'"			{ 
+;;printf("<CopyLine>02 %s\n",yytext);
   					  outputArray(yytext,(int)yyleng);
 					}
 <CopyLine>"'"."'"			{ 
+;;printf("<CopyLine>03 %s\n",yytext);
   					  outputArray(yytext,(int)yyleng);
 					}
 <CopyLine>@\"				{
+;;printf("<CopyLine>04 %s\n",yytext);
                                           if (getLanguageFromFileName(g_yyFileName)!=SrcLangExt_CSharp) REJECT;
 					  outputArray(yytext,(int)yyleng);
 					  BEGIN( CopyStringCs );
 					}
 <CopyLine>\"				{
+;;printf("<CopyLine>05 %s\n",yytext);
 					  outputChar(*yytext);
                                           if (getLanguageFromFileName(g_yyFileName)!=SrcLangExt_Fortran)
                                           {
@@ -1869,6 +1878,7 @@ CHARLIT   (("'"\\[0-7]{1,3}"'")|("'"\\."'")|("'"[^'\\\n]{1,4}"'"))
                                           }
 					}
 <CopyLine>\'				{
+;;printf("<CopyLine>06 %s\n",yytext);
                                           if (getLanguageFromFileName(g_yyFileName)!=SrcLangExt_Fortran) REJECT;
 					  outputChar(*yytext);
 					  BEGIN( CopyStringFtn );
@@ -3061,8 +3071,8 @@ void preprocessFile(const char *fileName,BufStr &input,BufStr &output)
 {
   printlex(yy_flex_debug, TRUE, __FILE__, fileName);
   uint orgOffset=output.curPos();
-  //printf("##########################\n%s\n####################\n",
-  //    input.data());
+  printf("pre.l ##########################\n%s\n####################\n",
+      input.data());
 
   g_macroExpansion = Config_getBool(MACRO_EXPANSION);
   g_expandOnlyPredef = Config_getBool(EXPAND_ONLY_PREDEF);
