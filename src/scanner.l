@@ -1022,7 +1022,7 @@ OPERATOR  "operator"{B}*({ARITHOP}|{ASSIGNOP}|{LOGICOP}|{BITOP})
 					   }
 					}
 <CliPropertyType>{ID}			{
-    pirntf("<CliPropertyType> ID %s\n",yytext);
+    printf("<CliPropertyType> ID %s\n",yytext);
   					  addType( current );
   					  current->name = yytext;
   					}
