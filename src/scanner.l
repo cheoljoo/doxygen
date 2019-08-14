@@ -1022,6 +1022,7 @@ OPERATOR  "operator"{B}*({ARITHOP}|{ASSIGNOP}|{LOGICOP}|{BITOP})
 					   }
 					}
 <CliPropertyType>{ID}			{
+    pirntf("<CliPropertyType> ID %s\n",yytext);
   					  addType( current );
   					  current->name = yytext;
   					}
@@ -1353,7 +1354,7 @@ OPERATOR  "operator"{B}*({ARITHOP}|{ASSIGNOP}|{LOGICOP}|{BITOP})
   					}
 <PackageName>{ID}(("."|"\\"){ID})*	{
   					  isTypedef=FALSE;
-					  //printf("Found namespace %s lang=%d\n",yytext,current->lang);
+					  printf("Found namespace %s lang=%d\n",yytext,current->lang);
 					  current->name = yytext;
 					  current->name = substitute(current->name,".","::");
 					  current->name = substitute(current->name,"\\","::");
