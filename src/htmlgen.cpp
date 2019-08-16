@@ -1001,7 +1001,7 @@ void HtmlGenerator::endProjectNumber()
 
 void HtmlGenerator::writeStyleInfo(int part)
 {
-  //printf("writeStyleInfo(%d)\n",part);
+  printf("HtmlGenerator::writeStyleInfo(%d)\n",part);
   if (part==0)
   {
     if (Config_getString(HTML_STYLESHEET).isEmpty()) // write default style sheet

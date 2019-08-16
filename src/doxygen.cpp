@@ -632,8 +632,8 @@ static void buildGroupListFiltered(EntryNav *rootNav,bool additional, bool inclu
         (root->groupDocType!=Entry::GROUPDOC_NORMAL &&  additional))
     {
       GroupDef *gd = Doxygen::groupSDict->find(root->name);
-      //printf("Processing group '%s':'%s' add=%d ext=%d gd=%p\n",
-      //    root->type.data(),root->name.data(),additional,includeExternal,gd);
+      printf("Processing group '%s':'%s' add=%d ext=%d gd=%p\n",
+          root->type.data(),root->name.data(),additional,includeExternal,gd);
 
       if (gd)
       {
@@ -695,8 +695,7 @@ static void buildGroupList(EntryNav *rootNav)
   // first process the @defgroups blocks
   buildGroupListFiltered(rootNav,FALSE,FALSE);
   // then process the @addtogroup, @weakgroup blocks
-  buildGroupListFiltered(rootNav,TRUE,FALSE);
-
+  buildGroupListFiltered(rootNav,TRUE,FALSE); 
   // --- then also process external groups
   // first process the @defgroups blocks
   buildGroupListFiltered(rootNav,FALSE,TRUE);
@@ -742,7 +741,7 @@ static void organizeSubGroupsFiltered(EntryNav *rootNav,bool additional)
       GroupDef *gd;
       if ((gd=Doxygen::groupSDict->find(root->name)))
       {
-        //printf("adding %s to group %s\n",root->name.data(),gd->name().data());
+        printf("adding %s to group %s\n",root->name.data(),gd->name().data());
         addGroupToGroups(root,gd);
       }
     }
@@ -762,10 +761,10 @@ static void organizeSubGroupsFiltered(EntryNav *rootNav,bool additional)
 
 static void organizeSubGroups(EntryNav *rootNav)
 {
-  //printf("Defining groups\n");
+  printf("Defining groups\n");
   // first process the @defgroups blocks
   organizeSubGroupsFiltered(rootNav,FALSE);
-  //printf("Additional groups\n");
+  printf("Additional groups\n");
   // then process the @addtogroup, @weakgroup blocks
   organizeSubGroupsFiltered(rootNav,TRUE);
 }
@@ -784,7 +783,7 @@ static void buildFileList(EntryNav *rootNav)
 
     bool ambig;
     FileDef *fd=findFileDef(Doxygen::inputNameDict,root->name,ambig);
-    //printf("**************** root->name=%s fd=%p\n",root->name.data(),fd);
+    printf("**************** buildFileList root->name=%s fd=%p\n",root->name.data(),fd);
     if (fd && !ambig)
     {
 #if 0
@@ -801,7 +800,7 @@ static void buildFileList(EntryNav *rootNav)
       else
 #endif
       {
-        //printf("Adding documentation!\n");
+        printf("Adding documentation!\n");
         // using FALSE in setDocumentation is small hack to make sure a file
         // is documented even if a \file command is used without further
         // documentation
@@ -1244,7 +1243,7 @@ ClassDef::CompoundType convertToCompoundType(int section,uint64 specifier)
 
 static void addClassToContext(EntryNav *rootNav)
 {
-  //printf("Loading entry for rootNav=%p name=%s\n",rootNav,rootNav->name().data());
+  printf("Loading entry for rootNav=%p name=%s\n",rootNav,rootNav->name().data());
   rootNav->loadEntry(g_storage);
   Entry *root = rootNav->entry();
 
@@ -1317,8 +1316,8 @@ static void addClassToContext(EntryNav *rootNav)
     QCString namespaceName;
     extractNamespaceName(fullName,className,namespaceName);
 
-    //printf("New class: fullname %s namespace `%s' name=`%s' brief=`%s' docs=`%s'\n",
-    //    fullName.data(),namespaceName.data(),className.data(),root->brief.data(),root->doc.data());
+    printf("New class: fullname %s namespace `%s' name=`%s' brief=`%s' docs=`%s'\n",
+        fullName.data(),namespaceName.data(),className.data(),root->brief.data(),root->doc.data());
 
     QCString tagName;
     QCString refFileName;
@@ -1362,8 +1361,8 @@ static void addClassToContext(EntryNav *rootNav)
     cd->setTypeConstraints(root->typeConstr);
     //printf("new ClassDef %s tempArgList=%p specScope=%s\n",fullName.data(),root->tArgList,root->scopeSpec.data());
 
-    //printf("class %s template args=%s\n",fullName.data(),
-    //    tArgList ? tempArgListToString(tArgList,root->lang).data() : "<none>");
+    printf("class %s template args=%s\n",fullName.data(),
+        tArgList ? tempArgListToString(tArgList,root->lang).data() : "<none>");
     cd->setTemplateArguments(tArgList);
     cd->setProtection(root->protection);
     cd->setIsStatic(root->stat);
@@ -1380,7 +1379,7 @@ static void addClassToContext(EntryNav *rootNav)
     cd->insertUsedFile(fd);
 
     // add class to the list
-    //printf("ClassDict.insert(%s)\n",fullName.data());
+    printf("ClassDict.insert(%s)\n",fullName.data());
     Doxygen::classSDict->append(fullName,cd);
 
     if (cd->isGeneric()) // generics are also stored in a separate dictionary for fast lookup of instantions
@@ -2870,8 +2869,8 @@ static void addVariable(EntryNav *rootNav,int isFuncPtr=-1)
         root->name=root->args.mid(i,l);
         root->args=root->args.mid(i+l,root->args.find(')',i+l)-i-l);
       }
-      //printf("new: type=`%s' name=`%s' args=`%s'\n",
-      //    root->type.data(),root->name.data(),root->args.data());
+      printf("new: type=`%s' name=`%s' args=`%s'\n",
+          root->type.data(),root->name.data(),root->args.data());
     }
     else
     {
@@ -2890,7 +2889,7 @@ static void addVariable(EntryNav *rootNav,int isFuncPtr=-1)
         {
           root->type=root->type.left(root->type.length()-1);
           root->args.prepend(") ");
-          //printf("root->type=%s root->args=%s\n",root->type.data(),root->args.data());
+          printf("root->type=%s root->args=%s\n",root->type.data(),root->args.data());
         }
       }
     }
@@ -3053,7 +3052,7 @@ nextMember:
 // If found they are stored in their class or in the global list.
 static void buildTypedefList(EntryNav *rootNav)
 {
-  //printf("buildVarList(%s)\n",rootNav->name().data());
+  printf("buildVarList(%s)\n",rootNav->name().data());
   if (!rootNav->name().isEmpty() &&
       rootNav->section()==Entry::VARIABLE_SEC &&
       rootNav->type().find("typedef ")!=-1 // its a typedef
@@ -3529,7 +3528,7 @@ static void buildFunctionList(EntryNav *rootNav)
 
     bool isFriend=root->type.find("friend ")!=-1;
     QCString rname = removeRedundantWhiteSpace(root->name);
-    //printf("rname=%s\n",rname.data());
+    printf("rname=%s\n",rname.data());
 
     QCString scope=rootNav->parent()->name(); //stripAnonymousNamespaceScope(root->parent->name);
     if (!rname.isEmpty() && scope.find('@')==-1)
@@ -3621,7 +3620,7 @@ static void buildFunctionList(EntryNav *rootNav)
           {
             NamespaceDef *mnd = md->getNamespaceDef();
             NamespaceDef *rnd = 0;
-            //printf("root namespace=%s\n",rootNav->parent()->name().data());
+            printf("root namespace=%s\n",rootNav->parent()->name().data());
             QCString fullScope = scope;
             QCString parentScope = rootNav->parent()->name();
             if (!parentScope.isEmpty() && !leftScopeMatch(parentScope,scope))
@@ -3629,14 +3628,14 @@ static void buildFunctionList(EntryNav *rootNav)
               if (!scope.isEmpty()) fullScope.prepend("::");
               fullScope.prepend(parentScope);
             }
-            //printf("fullScope=%s\n",fullScope.data());
+            printf("fullScope=%s\n",fullScope.data());
             rnd = getResolvedNamespace(fullScope);
             FileDef *mfd = md->getFileDef();
             QCString nsName,rnsName;
             if (mnd)  nsName = mnd->name().copy();
             if (rnd) rnsName = rnd->name().copy();
-            //printf("matching arguments for %s%s %s%s\n",
-            //    md->name().data(),md->argsString(),rname.data(),argListToString(root->argList).data());
+            printf("matching arguments for %s%s %s%s\n",
+                md->name().data(),md->argsString(),rname.data(),argListToString(root->argList).data());
             ArgumentList *mdAl = md->argumentList();
             ArgumentList *mdTempl = md->templateArguments();
 
@@ -3673,8 +3672,8 @@ static void buildFunctionList(EntryNav *rootNav)
               {
                 gd = Doxygen::groupSDict->find(root->groups->getFirst()->groupname.data());
               }
-              //printf("match!\n");
-              //printf("mnd=%p rnd=%p nsName=%s rnsName=%s\n",mnd,rnd,nsName.data(),rnsName.data());
+              printf("match!\n");
+              printf("mnd=%p rnd=%p nsName=%s rnsName=%s\n",mnd,rnd,nsName.data(),rnsName.data());
               // see if we need to create a new member
               found=(mnd && rnd && nsName==rnsName) ||   // members are in the same namespace
                     ((mnd==0 && rnd==0 && mfd!=0 &&       // no external reference and
@@ -7151,7 +7150,7 @@ static void findEnums(EntryNav *rootNav)
     bool isGlobal;
     bool isRelated=FALSE;
     bool isMemberOf=FALSE;
-    //printf("Found enum with name `%s' relates=%s\n",root->name.data(),root->relates.data());
+    printf("Found enum with name `%s' relates=%s\n",root->name.data(),root->relates.data());
     int i;
 
     QCString name;
@@ -7223,17 +7222,17 @@ static void findEnums(EntryNav *rootNav)
       md->setBodyDef(rootNav->fileDef());
       md->setMemberSpecifiers(root->spec);
       md->setEnumBaseType(root->args);
-      //printf("Enum %s definition at line %d of %s: protection=%d scope=%s\n",
-      //    root->name.data(),root->bodyLine,root->fileName.data(),root->protection,cd?cd->name().data():"<none>");
+      printf("Enum %s definition at line %d of %s: protection=%d scope=%s\n",
+          root->name.data(),root->bodyLine,root->fileName.data(),root->protection,cd?cd->name().data():"<none>");
       md->addSectionsToDefinition(root->anchors);
       md->setMemberGroupId(root->mGrpId);
       md->enableCallGraph(root->callGraph);
       md->enableCallerGraph(root->callerGraph);
       md->enableReferencedByRelation(root->referencedByRelation);
       md->enableReferencesRelation(root->referencesRelation);
-      //printf("%s::setRefItems(%d)\n",md->name().data(),root->sli?root->sli->count():-1);
+      printf("%s::setRefItems(%d)\n",md->name().data(),root->sli?root->sli->count():-1);
       md->setRefItems(root->sli);
-      //printf("found enum %s nd=%p\n",md->name().data(),nd);
+      printf("found enum %s nd=%p\n",md->name().data(),nd);
       bool defSet=FALSE;
 
       QCString baseType = root->args;
@@ -7252,7 +7251,7 @@ static void findEnums(EntryNav *rootNav)
         {
           md->setDefinition(nd->name()+"::"+name+baseType);
         }
-        //printf("definition=%s\n",md->definition());
+        printf("definition=%s\n",md->definition());
         defSet=TRUE;
         md->setNamespace(nd);
         nd->insertMember(md);
@@ -7292,7 +7291,7 @@ static void findEnums(EntryNav *rootNav)
       md->setBriefDescription(root->brief,root->briefFile,root->briefLine);
       md->setInbodyDocumentation(root->inbodyDocs,root->inbodyFile,root->inbodyLine);
 
-      //printf("Adding member=%s\n",md->name().data());
+      printf("Adding member=%s\n",md->name().data());
       MemberName *mn;
       if ((mn=(*mnsd)[name]))
       {
@@ -7304,8 +7303,7 @@ static void findEnums(EntryNav *rootNav)
         mn = new MemberName(name);
         mn->append(md);
         mnsd->append(name,mn);
-        //printf("add %s to new memberName. Now %d members\n",
-        //       name.data(),mn->count());
+        printf("add %s to new memberName. Now %d members\n", name.data(),mn->count());
       }
       addMemberToGroups(root,md);
     }
@@ -7912,7 +7910,7 @@ static void buildCompleteMemberLists()
          cd->subClasses()==0 && // is a root of the hierarchy
          cd->baseClasses()) // and has at least one base class
     {
-      //printf("*** merging members for %s\n",cd->name().data());
+      printf("*** merging members for %s\n",cd->name().data());
       cd->mergeMembers();
     }
   }
@@ -8705,8 +8703,8 @@ static void findDirDocumentation(EntryNav *rootNav)
 
     QCString normalizedName = root->name;
     normalizedName = substitute(normalizedName,"\\","/");
-    //printf("root->docFile=%s normalizedName=%s\n",
-    //    root->docFile.data(),normalizedName.data());
+    printf("root->docFile=%s normalizedName=%s\n",
+        root->docFile.data(),normalizedName.data());
     if (root->docFile==normalizedName) // current dir?
     {
       int lastSlashPos=normalizedName.findRev('/');
@@ -8723,7 +8721,7 @@ static void findDirDocumentation(EntryNav *rootNav)
     SDict<DirDef>::Iterator sdi(*Doxygen::directories);
     for (sdi.toFirst();(dir=sdi.current());++sdi)
     {
-      //printf("Dir: %s<->%s\n",dir->name().data(),normalizedName.data());
+      printf("Dir: %s<->%s\n",dir->name().data(),normalizedName.data());
       if (dir->name().right(normalizedName.length())==normalizedName)
       {
         if (matchingDir)
@@ -8743,7 +8741,7 @@ static void findDirDocumentation(EntryNav *rootNav)
     }
     if (matchingDir)
     {
-      //printf("Match for with dir %s\n",matchingDir->name().data());
+      printf("Match for with dir %s\n",matchingDir->name().data());
       matchingDir->setBriefDescription(root->brief,root->briefFile,root->briefLine);
       matchingDir->setDocumentation(root->doc,root->docFile,root->docLine);
       matchingDir->setRefItems(root->sli);

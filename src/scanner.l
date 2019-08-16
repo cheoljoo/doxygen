@@ -5065,6 +5065,7 @@ OPERATOR  "operator"{B}*({ARITHOP}|{ASSIGNOP}|{LOGICOP}|{BITOP})
   					  current->exception += *yytext;
   					}
 <Function>"("				{ current->type += current->name ;
+printf("<Function>01  %s\n",yytext);
 					  current->name  = current->args ;
 					  current->args  = yytext ;
 					  roundCount=0;
@@ -5093,8 +5094,8 @@ OPERATOR  "operator"{B}*({ARITHOP}|{ASSIGNOP}|{LOGICOP}|{BITOP})
                                             bool isFunction = ti==-1 || // not a (...*...) pattern
                                                               (ts!=-1 && ts<te && ts<ti && ti<te); // (...*...) is part of a template argument list
                                                               
-                                            //printf("type=%s ts=%d te=%d ti=%d isFunction=%d\n",
-                                            //    current->type.data(),ts,te,ti,isFunction);
+                                            printf("<Function>02 type=%s ts=%d te=%d ti=%d isFunction=%d\n",
+                                                current->type.data(),ts,te,ti,isFunction);
 					    QCString tempName;
 					    if (tempArg==-1) tempName=current->name; else tempName=current->name.left(tempArg);
 					    if (!current->type.isEmpty() &&
@@ -6818,6 +6819,7 @@ OPERATOR  "operator"{B}*({ARITHOP}|{ASSIGNOP}|{LOGICOP}|{BITOP})
 <SkipComment>[^\*\n]+
 
 <*>"[["                                 { // C++11 attribute
+printf("<*> 01 \n");
                                           lastC11AttributeContext = YY_START;
                                           BEGIN( SkipC11Attribute );
                                         }
@@ -7025,15 +7027,15 @@ static void handleParametersCommentBlocks(ArgumentList *al)
 
 static void parseCompounds(Entry *rt)
 {
-  //printf("parseCompounds(%s)\n",rt->name.data());
+  printf("parseCompounds(%s)\n",rt->name.data());
   EntryListIterator eli(*rt->children());
   Entry *ce;
   for (;(ce=eli.current());++eli)
   {
     if (!ce->program.isEmpty())
     {
-      //printf("-- %s ---------\n%s\n---------------\n",
-      //  ce->name.data(),ce->program.data());
+      printf("-- %s ---------\n%s\n---------------\n",
+        ce->name.data(),ce->program.data());
       // init scanner state
       padCount=0;
       //depthIf = 0;
@@ -7123,7 +7125,9 @@ static void parseCompounds(Entry *rt)
       //memberGroupInside.resize(0);
       groupEnterCompound(yyFileName,yyLineNr,ce->name);
       
+      printf("--01\n");
       scannerYYlex() ;
+      printf("--02\n");
       g_lexInit=TRUE;
       //forceEndGroup();
 
@@ -7223,6 +7227,7 @@ static void parseMain(const char *fileName,
 
     //forceEndGroup();
     groupLeaveFile(yyFileName,yyLineNr);
+    ;;printf("scanner.l 2-1 %s\n",__PRETTY_FUNCTION__);
 
     //if (depthIf>0)
     //{
@@ -7230,6 +7235,7 @@ static void parseMain(const char *fileName,
     //}
 
     rt->program.resize(0);
+    ;;printf("scanner.l 2-2 %s\n",__PRETTY_FUNCTION__);
     if (rt->children()->contains(current)==0) 
       // it could be that current is already added as a child to rt, so we
       // only delete it if this is not the case. See bug 635317.
@@ -7237,11 +7243,14 @@ static void parseMain(const char *fileName,
       delete current; current=0;
     }
 
+    ;;printf("scanner.l 2-3 %s\n",__PRETTY_FUNCTION__);
     parseCompounds(rt);
+    ;;printf("scanner.l 3 %s\n",__PRETTY_FUNCTION__);
 
     inputFile.close();
 
     anonNSCount++;
+    ;;printf("scanner.l 4 %s\n",__PRETTY_FUNCTION__);
 
   }
 }

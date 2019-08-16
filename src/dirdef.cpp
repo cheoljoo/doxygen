@@ -920,7 +920,7 @@ static void computeCommonDirPrefix()
   {
     QCString diskName = dir->name().right(dir->name().length()-path.length());
     dir->setDiskName(diskName);
-    //printf("set disk name: %s -> %s\n",dir->name().data(),diskName.data());
+    printf("set disk name: %s -> %s\n",dir->name().data(),diskName.data());
   }
 }
 
@@ -935,7 +935,7 @@ void buildDirectories()
     FileDef *fd;
     for (;(fd=fni.current());++fni)
     {
-      //printf("buildDirectories %s\n",fd->name().data());
+      printf("buildDirectories %s\n",fd->name().data());
       if (fd->getReference().isEmpty())
       {
         DirDef *dir;
@@ -967,8 +967,8 @@ void buildDirectories()
       if (parent) 
       {
         parent->addSubDir(dir); 
-        //printf("DirDef::addSubdir(): Adding subdir\n%s to\n%s\n",
-        //  dir->displayName().data(), parent->displayName().data());
+        printf("DirDef::addSubdir(): Adding subdir\n%s to\n%s\n",
+          dir->displayName().data(), parent->displayName().data());
       }
     }
   }
