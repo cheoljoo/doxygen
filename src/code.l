@@ -621,6 +621,7 @@ static void writeMultiLineCodeLink(CodeOutputInterface &ol,
   }
   bool done=FALSE;
   char *p=(char *)text;
+  printf("writeMultipleLineCodeLink(text=%s)\n",text);
   while (!done)
   {
     char *sp=p;
@@ -1149,7 +1150,7 @@ static bool generateClassMemberLink(CodeOutputInterface &ol,MemberDef *xmd,const
   if (xd && xd->isLinkable())
   {
 
-    //printf("g_currentDefiniton=%p g_currentMemberDef=%p xmd=%p g_insideBody=%d\n",g_currentDefinition,g_currentMemberDef,xmd,g_insideBody);
+    printf("g_currentDefiniton=%p g_currentMemberDef=%p xmd=%p g_insideBody=%d\n",g_currentDefinition,g_currentMemberDef,xmd,g_insideBody);
 
     if (xmd->templateMaster()) xmd = xmd->templateMaster();
 
@@ -1198,7 +1199,7 @@ static bool generateClassMemberLink(CodeOutputInterface &ol,Definition *def,cons
   else if (def && def->definitionType()==Definition::TypeNamespace)
   {
     NamespaceDef *nd = (NamespaceDef*)def;
-    //printf("Looking for %s inside namespace %s\n",memName,nd->name().data());
+    printf("Looking for %s inside namespace %s\n",memName,nd->name().data());
     Definition *innerDef = nd->findInnerCompound(memName);
     if (innerDef)
     {
@@ -2503,6 +2504,17 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
                                           if (g_currentMemberDef && g_currentMemberDef->isFunction())
                                           {
                                             g_currentMemberDef->addFlowKeyWord();
+                                            printf("<Body FLOWCONDITION/BN declaration=%s\n",g_currentMemberDef->declaration());
+                                            printf("<Body FLOWCONDITION/BN definition=%s\n",g_currentMemberDef->definition());
+                                            printf("<Body FLOWCONDITION/BN typeString=%s\n",g_currentMemberDef->typeString());
+                                            printf("<Body FLOWCONDITION/BN argsString=%s\n",g_currentMemberDef->argsString());
+                                            printf("<Body FLOWCONDITION/BN numberOfFlowKeyWords=%d\n",g_currentMemberDef->numberOfFlowKeyWords());
+                                            FileDef *tfd = g_currentMemberDef->getFileDef();
+                                            printf("<Body FLOWCONDITION/BN file name=%s  lineNr=%d\n",tfd->name().data(), g_yyLineNr);
+                                            printf("<Body FLOWCONDITION/BN file getSourceFileBase=%s\n",tfd->getSourceFileBase().data());
+                                            printf("<Body FLOWCONDITION/BN file getPath=%s\n",tfd->getPath().data());
+                                            printf("<Body FLOWCONDITION/BN file title=%s\n",tfd->title().data());
+                                            // g_currentMemberDef->memberDefinition());
                                           }
                                           startFontClass("keywordflow");
                                           codifyLines(yytext);
@@ -3838,7 +3850,7 @@ void parseCCode(CodeOutputInterface &od,const char *className,const QCString &s,
 		MemberDef *memberDef,bool showLineNumbers,Definition *searchCtx,
                 bool collectXRefs)
 {
-  printf("***parseCode() exBlock=%d exName=%s fd=%p className=%s searchCtx=%s\n",
+  printf("***parseCCode() exBlock=%d exName=%s fd=%p className=%s searchCtx=%s\n",
         exBlock,exName,fd,className,searchCtx?searchCtx->name().data():"<none>");
 
   if (s.isEmpty()) return;

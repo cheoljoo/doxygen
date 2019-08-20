@@ -2571,8 +2571,8 @@ void MemberDef::writeDocumentation(MemberList *ml,
   bool inFile = container->definitionType()==Definition::TypeFile;
   bool hasDocs = isDetailedSectionVisible(inGroup,inFile);
 
-  //printf("MemberDef::writeDocumentation(): name=`%s' hasDocs=`%d' containerType=%d inGroup=%d sectionLinkable=%d\n",
-  //    name().data(),hasDocs,container->definitionType(),inGroup,isDetailedSectionLinkable());
+  printf("MemberDef::writeDocumentation(): name=`%s' hasDocs=`%d' containerType=%d inGroup=%d sectionLinkable=%d\n",
+      name().data(),hasDocs,container->definitionType(),inGroup,isDetailedSectionLinkable());
 
   //if ( !hasDocs ) return;
   //if (isEnumValue() && !showEnumValues) return;

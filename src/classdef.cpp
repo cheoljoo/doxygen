@@ -2593,8 +2593,8 @@ void ClassDef::writeMemberList(OutputList &ol)
       Protection prot = mi->prot;
       Specifier virt=md->virtualness();
 
-      //printf("%s: Member %s of class %s md->protection()=%d mi->prot=%d prot=%d inherited=%d\n",
-      //    name().data(),md->name().data(),cd->name().data(),md->protection(),mi->prot,prot,mi->inherited);
+      printf("%s: Member %s of class %s md->protection()=%d mi->prot=%d prot=%d inherited=%d\n",
+          name().data(),md->name().data(),cd->name().data(),md->protection(),mi->prot,prot,mi->inherited);
 
       if (cd && !md->name().isEmpty() && md->name()[0]!='@')
       {
