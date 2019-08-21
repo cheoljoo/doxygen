@@ -20,6 +20,7 @@
 
 #include <qlist.h>
 #include <sys/types.h>
+#include <qlist.h>
 
 #include "types.h"
 #include "definition.h"
@@ -38,6 +39,48 @@ class ArgumentList;
 class MemberDefImpl;
 class QStrList;
 struct TagInfo;
+
+/**
+ * @brief MemberFlowInfo is Flow keyword and condition information for each member.
+ *
+ * @details break/do/else/return do not have condition.  switch/case/for/if/while have condition.
+ * @details (c++) switch case -> (plantuml) if elseif  endif
+ * @details (c++) if else     -> (plantuml) if else endif
+ * @details (c++) if else if  -> (plantuml) if elseif  endif
+ * @details (c++) do while    -> (plantuml) repeat ~ repeat while
+ * @details (c++) while       -> (plantuml) while ~ endwhile
+ * @details (c++) for         -> (plantuml) while ~ endwhile
+ */
+class MemberFlowInfo
+{
+    public:
+        // FLOWKW ("break"|"catch"|"continue"|"default"|"do"|"else"|"finally"|"return"|"switch"|"throw"|"throws"|"@catch"|"@finally")
+        // FLOWCONDITION  ("case"|"for"|"foreach"|"for each"|"goto"|"if"|"try"|"while"|"@try"
+        enum FlowKW { 
+            None          ,
+            Break         ,
+            Do            ,
+            Else          ,
+            Return        ,
+            Switch        ,
+            Case          ,
+            For           ,
+            ForEach       ,
+            If            ,
+            While 
+        };
+
+        MemberFlowInfo(FlowKW flow = MemberFlowInfo::None,QCString condition ="",int depth=0,QCString filename="",int line=-1) : m_flow(flow),m_condition(condition),m_depth(depth),m_filename(filename),m_lineNr(line){}
+        virtual ~MemberFlowInfo(){}
+
+    private:
+        FlowKW m_flow;  //* enum FlowKW
+        QCString m_condition; 
+        int m_depth; 
+        QCString m_filename;
+        int m_lineNr; 
+};
+
 
 /** A model of a class/file/namespace member symbol. */
 class MemberDef : public Definition
@@ -274,6 +317,10 @@ class MemberDef : public Definition
     QCString fieldType() const;
     bool isReference() const;
 
+
+    // flow keyword and condition
+    QList<MemberFlowInfo> m_flowInfo;
+    void addFlowInfo(MemberFlowInfo::FlowKW flow,QCString condition,int depth,QCString filename,int line);
 
     //-----------------------------------------------------------------------------------
     // ----  setters -----

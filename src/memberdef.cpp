@@ -5012,6 +5012,13 @@ void MemberDef::invalidateCachedArgumentTypes()
   invalidateCachedTypesInArgumentList(m_impl->declArgList);
 }
 
+void MemberDef::addFlowInfo(MemberFlowInfo::FlowKW flow,QCString condition,int depth,QCString filename,int line)
+{
+  MemberFlowInfo mfi(flow,condition,depth,filename,line);
+  m_flowInfo.append(&mfi);
+  //m_flowInfo.insert(index,&mfi);
+}
+
 void MemberDef::addFlowKeyWord()
 {
   number_of_flowkw++;

@@ -2521,6 +2521,9 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
                                           endFontClass();
                                           g_name.resize(0);g_type.resize(0);
                                           g_inForEachExpression = (strcmp(yytext,"for each")==0 || strcmp(yytext, "foreach")==0);
+                                            printf("<Body FLOWCONDITION/BN flowInfo size=%d\n",g_currentMemberDef->m_flowInfo.count());
+                                          g_currentMemberDef->addFlowInfo(MemberFlowInfo::For,"()",1,"a.cpp",100);
+                                            printf("<Body FLOWCONDITION/BN flowInfo size=%d\n",g_currentMemberDef->m_flowInfo.count());
                                           BEGIN(FuncCall);
                                         }
 <Body>{FLOWKW}/([^a-z_A-Z0-9]) 		{
