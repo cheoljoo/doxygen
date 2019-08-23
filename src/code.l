@@ -91,6 +91,9 @@ static FileDef *     g_sourceFileDef;
 static bool          g_lineNumbers;
 static Definition *  g_currentDefinition;
 static MemberDef *   g_currentMemberDef;
+static MemberFlowInfo g_currentMemberFlowInfo;
+static bool g_currentMemberFlowInfoBool = FALSE;
+static bool g_currentMemberFlowInfoElse = FALSE;
 static bool          g_includeCodeFragment;
 static const char *  g_currentFontClass;
 static bool          g_searchingForBody;
@@ -2089,6 +2092,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
   					  g_code->codify(yytext);
 					}
 <Body,FuncCall>"{"			{ 
+                      g_currentMemberFlowInfoElse = FALSE;  // check the status of not "else if"
                             printf("FuncCall14 \{ %s\n",yytext);
                                           g_theVarContext.pushScope();
 
@@ -2491,29 +2495,58 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
   				          g_name.resize(0);g_type.resize(0);
 					}
 <Body>{FLOWKW}/{BN}*"(" 			{
-    printf("<Body FLOWKW/ BN %s\n",yytext);
+    printf("<Body FLOWCONDITION  FLOWKW/ BN %s\n",yytext);
   					  startFontClass("keywordflow");
   					  codifyLines(yytext);
 					  endFontClass();
   				          g_name.resize(0);g_type.resize(0);
 					  g_inForEachExpression = (qstrcmp(yytext,"for each")==0 || qstrcmp(yytext, "foreach")==0);
+                      //g_currentMemberFlowInfo.m_str = yytext;
+                      g_currentMemberFlowInfo.setFlow(yytext);
+                      g_currentMemberFlowInfo.m_condition = "";
+                      g_currentMemberFlowInfo.m_depth = g_bodyCurlyCount;
+                      g_currentMemberFlowInfo.m_filename = g_currentMemberDef->definition();
+                      g_currentMemberFlowInfo.m_lineNr = g_yyLineNr;
+                      g_currentMemberFlowInfoBool = TRUE;
+                                            printf("<Body FLOWKW/BN declaration=%s\n",g_currentMemberDef->declaration());
+                                            printf("<Body FLOWKW/BN definition=%s\n",g_currentMemberDef->definition());
+                                            printf("<Body FLOWKW/BN typeString=%s\n",g_currentMemberDef->typeString());
+                                            printf("<Body FLOWKW/BN argsString=%s\n",g_currentMemberDef->argsString());
+                                            printf("<Body FLOWKW/BN numberOfFlowKeyWords=%d\n",g_currentMemberDef->numberOfFlowKeyWords());
+                                            FileDef *tfd = g_currentMemberDef->getFileDef();
+                                            printf("<Body FLOWKW/BN file name=%s  lineNr=%d\n",tfd->name().data(), g_yyLineNr);
+                                            printf("<Body FLOWKW/BN file getSourceFileBase=%s\n",tfd->getSourceFileBase().data());
+                                            printf("<Body FLOWKW/BN file getPath=%s\n",tfd->getPath().data());
+                                            printf("<Body FLOWKW/BN file title=%s\n",tfd->title().data());
+                                            printf("<Body FLOWKW/BN g_bracketCount=%d\n",g_bracketCount);
+                                            printf("<Body FLOWKW/BN g_bodyCurlyCount=%d\n",g_bodyCurlyCount);
+                                            // g_currentMemberDef->memberDefinition());
 					  BEGIN(FuncCall);
   					}
 <Body>{FLOWCONDITION}/{BN}*"("          {
                                         printf("<Body FLOWCONDITION/BN %s\n",yytext);
+                      //g_currentMemberFlowInfo.m_str = yytext;
+                      g_currentMemberFlowInfo.setFlow(yytext);
+                      g_currentMemberFlowInfo.m_condition = "";
+                      g_currentMemberFlowInfo.m_depth = g_bodyCurlyCount;
+                      g_currentMemberFlowInfo.m_filename = g_currentMemberDef->definition();
+                      g_currentMemberFlowInfo.m_lineNr = g_yyLineNr;
+                      g_currentMemberFlowInfoBool = TRUE;
                                           if (g_currentMemberDef && g_currentMemberDef->isFunction())
                                           {
                                             g_currentMemberDef->addFlowKeyWord();
-                                            printf("<Body FLOWCONDITION/BN declaration=%s\n",g_currentMemberDef->declaration());
-                                            printf("<Body FLOWCONDITION/BN definition=%s\n",g_currentMemberDef->definition());
-                                            printf("<Body FLOWCONDITION/BN typeString=%s\n",g_currentMemberDef->typeString());
-                                            printf("<Body FLOWCONDITION/BN argsString=%s\n",g_currentMemberDef->argsString());
-                                            printf("<Body FLOWCONDITION/BN numberOfFlowKeyWords=%d\n",g_currentMemberDef->numberOfFlowKeyWords());
+                                            printf("<Body FLOWCOND/BN declaration=%s\n",g_currentMemberDef->declaration());
+                                            printf("<Body FLOWCOND/BN definition=%s\n",g_currentMemberDef->definition());
+                                            printf("<Body FLOWCOND/BN typeString=%s\n",g_currentMemberDef->typeString());
+                                            printf("<Body FLOWCOND/BN argsString=%s\n",g_currentMemberDef->argsString());
+                                            printf("<Body FLOWCOND/BN numberOfFlowKeyWords=%d\n",g_currentMemberDef->numberOfFlowKeyWords());
                                             FileDef *tfd = g_currentMemberDef->getFileDef();
-                                            printf("<Body FLOWCONDITION/BN file name=%s  lineNr=%d\n",tfd->name().data(), g_yyLineNr);
-                                            printf("<Body FLOWCONDITION/BN file getSourceFileBase=%s\n",tfd->getSourceFileBase().data());
-                                            printf("<Body FLOWCONDITION/BN file getPath=%s\n",tfd->getPath().data());
-                                            printf("<Body FLOWCONDITION/BN file title=%s\n",tfd->title().data());
+                                            printf("<Body FLOWCOND/BN file name=%s  lineNr=%d\n",tfd->name().data(), g_yyLineNr);
+                                            printf("<Body FLOWCOND/BN file getSourceFileBase=%s\n",tfd->getSourceFileBase().data());
+                                            printf("<Body FLOWCOND/BN file getPath=%s\n",tfd->getPath().data());
+                                            printf("<Body FLOWCOND/BN file title=%s\n",tfd->title().data());
+                                            printf("<Body FLOWCOND/BN g_bracketCount=%d\n",g_bracketCount);
+                                            printf("<Body FLOWCOND/BN g_bodyCurlyCount=%d\n",g_bodyCurlyCount);
                                             // g_currentMemberDef->memberDefinition());
                                           }
                                           startFontClass("keywordflow");
@@ -2521,13 +2554,37 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
                                           endFontClass();
                                           g_name.resize(0);g_type.resize(0);
                                           g_inForEachExpression = (strcmp(yytext,"for each")==0 || strcmp(yytext, "foreach")==0);
-                                            printf("<Body FLOWCONDITION/BN flowInfo size=%d\n",g_currentMemberDef->m_flowInfo.count());
-                                          g_currentMemberDef->addFlowInfo(MemberFlowInfo::For,"()",1,"a.cpp",100);
-                                            printf("<Body FLOWCONDITION/BN flowInfo size=%d\n",g_currentMemberDef->m_flowInfo.count());
                                           BEGIN(FuncCall);
                                         }
 <Body>{FLOWKW}/([^a-z_A-Z0-9]) 		{
-                                        printf("<Body FLOWKW/ a-z %s\n",yytext);
+                                        printf("<Body FLOWCONDITION FLOWKW/ a-z %s\n",yytext);
+                      //g_currentMemberFlowInfo.m_str = yytext;
+                      g_currentMemberFlowInfo.setFlow(yytext);
+                      g_currentMemberFlowInfo.m_condition = "";
+                      g_currentMemberFlowInfo.m_depth = g_bodyCurlyCount;
+                      g_currentMemberFlowInfo.m_filename = g_currentMemberDef->definition();
+                      g_currentMemberFlowInfo.m_lineNr = g_yyLineNr;
+                      g_currentMemberFlowInfoBool = TRUE;
+
+                      /** To check "else if"
+                       *    if "{" or ";" follow "else" , it is not "else if".
+                       */
+                      if( g_currentMemberFlowInfo.m_flow = MemberFlowInfo::Else ){
+                          g_currentMemberFlowInfoElse = TRUE;
+                      }
+                                            printf("<Body FLOWKW/BN declaration=%s\n",g_currentMemberDef->declaration());
+                                            printf("<Body FLOWKW/BN definition=%s\n",g_currentMemberDef->definition());
+                                            printf("<Body FLOWKW/BN typeString=%s\n",g_currentMemberDef->typeString());
+                                            printf("<Body FLOWKW/BN argsString=%s\n",g_currentMemberDef->argsString());
+                                            printf("<Body FLOWKW/BN numberOfFlowKeyWords=%d\n",g_currentMemberDef->numberOfFlowKeyWords());
+                                            FileDef *tfd = g_currentMemberDef->getFileDef();
+                                            printf("<Body FLOWKW/BN file name=%s  lineNr=%d\n",tfd->name().data(), g_yyLineNr);
+                                            printf("<Body FLOWKW/BN file getSourceFileBase=%s\n",tfd->getSourceFileBase().data());
+                                            printf("<Body FLOWKW/BN file getPath=%s\n",tfd->getPath().data());
+                                            printf("<Body FLOWKW/BN file title=%s\n",tfd->title().data());
+                                            printf("<Body FLOWKW/BN g_bracketCount=%d\n",g_bracketCount);
+                                            printf("<Body FLOWKW/BN g_bodyCurlyCount=%d\n",g_bodyCurlyCount);
+                                            // g_currentMemberDef->memberDefinition());
   					  startFontClass("keywordflow");
   					  codifyLines(yytext);
 					  endFontClass();
@@ -2538,6 +2595,26 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
   					}
 <Body>{FLOWCONDITION}/([^a-z_A-Z0-9]) 	{
                                         printf("<Body FLOWCONDITION/a-z0-9 %s\n",yytext);
+                      //g_currentMemberFlowInfo.m_str = yytext;
+                      g_currentMemberFlowInfo.setFlow(yytext);
+                      g_currentMemberFlowInfo.m_condition = "";
+                      g_currentMemberFlowInfo.m_depth = g_bodyCurlyCount;
+                      g_currentMemberFlowInfo.m_filename = g_currentMemberDef->definition();
+                      g_currentMemberFlowInfo.m_lineNr = g_yyLineNr;
+                      g_currentMemberFlowInfoBool = TRUE;
+                                            printf("<Body FLOWKW/BN declaration=%s\n",g_currentMemberDef->declaration());
+                                            printf("<Body FLOWKW/BN definition=%s\n",g_currentMemberDef->definition());
+                                            printf("<Body FLOWKW/BN typeString=%s\n",g_currentMemberDef->typeString());
+                                            printf("<Body FLOWKW/BN argsString=%s\n",g_currentMemberDef->argsString());
+                                            printf("<Body FLOWKW/BN numberOfFlowKeyWords=%d\n",g_currentMemberDef->numberOfFlowKeyWords());
+                                            FileDef *tfd = g_currentMemberDef->getFileDef();
+                                            printf("<Body FLOWKW/BN file name=%s  lineNr=%d\n",tfd->name().data(), g_yyLineNr);
+                                            printf("<Body FLOWKW/BN file getSourceFileBase=%s\n",tfd->getSourceFileBase().data());
+                                            printf("<Body FLOWKW/BN file getPath=%s\n",tfd->getPath().data());
+                                            printf("<Body FLOWKW/BN file title=%s\n",tfd->title().data());
+                                            printf("<Body FLOWKW/BN g_bracketCount=%d\n",g_bracketCount);
+                                            printf("<Body FLOWKW/BN g_bodyCurlyCount=%d\n",g_bodyCurlyCount);
+                                            // g_currentMemberDef->memberDefinition());
                                           if (g_currentMemberDef && g_currentMemberDef->isFunction())
                                           {
                                             g_currentMemberDef->addFlowKeyWord();
@@ -2551,13 +2628,53 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
                                           }
                                         }
 <Body>{FLOWKW}/{B}* 			{
-                                        printf("<Body FLOWKW/ B %s\n",yytext);
+                                        printf("<Body FLOWCONDITION FLOWKW/ B %s\n",yytext);
+                      //g_currentMemberFlowInfo.m_str = yytext;
+                      g_currentMemberFlowInfo.setFlow(yytext);
+                      g_currentMemberFlowInfo.m_condition = "";
+                      g_currentMemberFlowInfo.m_depth = g_bodyCurlyCount;
+                      g_currentMemberFlowInfo.m_filename = g_currentMemberDef->definition();
+                      g_currentMemberFlowInfo.m_lineNr = g_yyLineNr;
+                      g_currentMemberFlowInfoBool = TRUE;
+                                            printf("<Body FLOWKW/BN declaration=%s\n",g_currentMemberDef->declaration());
+                                            printf("<Body FLOWKW/BN definition=%s\n",g_currentMemberDef->definition());
+                                            printf("<Body FLOWKW/BN typeString=%s\n",g_currentMemberDef->typeString());
+                                            printf("<Body FLOWKW/BN argsString=%s\n",g_currentMemberDef->argsString());
+                                            printf("<Body FLOWKW/BN numberOfFlowKeyWords=%d\n",g_currentMemberDef->numberOfFlowKeyWords());
+                                            FileDef *tfd = g_currentMemberDef->getFileDef();
+                                            printf("<Body FLOWKW/BN file name=%s  lineNr=%d\n",tfd->name().data(), g_yyLineNr);
+                                            printf("<Body FLOWKW/BN file getSourceFileBase=%s\n",tfd->getSourceFileBase().data());
+                                            printf("<Body FLOWKW/BN file getPath=%s\n",tfd->getPath().data());
+                                            printf("<Body FLOWKW/BN file title=%s\n",tfd->title().data());
+                                            printf("<Body FLOWKW/BN g_bracketCount=%d\n",g_bracketCount);
+                                            printf("<Body FLOWKW/BN g_bodyCurlyCount=%d\n",g_bodyCurlyCount);
+                                            // g_currentMemberDef->memberDefinition());
   					  startFontClass("keywordflow");
   					  codifyLines(yytext);
 					  endFontClass();
   					}
 <Body>{FLOWCONDITION}/{B}*              {
                                         printf("FLOWCONDITION/B %s\n",yytext);
+                      //g_currentMemberFlowInfo.m_str = yytext;
+                      g_currentMemberFlowInfo.setFlow(yytext);
+                      g_currentMemberFlowInfo.m_condition = "";
+                      g_currentMemberFlowInfo.m_depth = g_bodyCurlyCount;
+                      g_currentMemberFlowInfo.m_filename = g_currentMemberDef->definition();
+                      g_currentMemberFlowInfo.m_lineNr = g_yyLineNr;
+                      g_currentMemberFlowInfoBool = TRUE;
+                                            printf("<Body FLOWCOND/BN declaration=%s\n",g_currentMemberDef->declaration());
+                                            printf("<Body FLOWCOND/BN definition=%s\n",g_currentMemberDef->definition());
+                                            printf("<Body FLOWCOND/BN typeString=%s\n",g_currentMemberDef->typeString());
+                                            printf("<Body FLOWCOND/BN argsString=%s\n",g_currentMemberDef->argsString());
+                                            printf("<Body FLOWCOND/BN numberOfFlowKeyWords=%d\n",g_currentMemberDef->numberOfFlowKeyWords());
+                                            FileDef *tfd = g_currentMemberDef->getFileDef();
+                                            printf("<Body FLOWCOND/BN file name=%s  lineNr=%d\n",tfd->name().data(), g_yyLineNr);
+                                            printf("<Body FLOWCOND/BN file getSourceFileBase=%s\n",tfd->getSourceFileBase().data());
+                                            printf("<Body FLOWCOND/BN file getPath=%s\n",tfd->getPath().data());
+                                            printf("<Body FLOWCOND/BN file title=%s\n",tfd->title().data());
+                                            printf("<Body FLOWCOND/BN g_bracketCount=%d\n",g_bracketCount);
+                                            printf("<Body FLOWCOND/BN g_bodyCurlyCount=%d\n",g_bodyCurlyCount);
+                                            // g_currentMemberDef->memberDefinition());
                                           if (g_currentMemberDef && g_currentMemberDef->isFunction())
                                           {
                                             g_currentMemberDef->addFlowKeyWord();
@@ -2694,6 +2811,7 @@ printf("<Body SCOPENAME/BN %s\n",yytext);
 					}
 <Body>{SCOPENAME}/{B}* 			{ // p->func()
 printf("<Body SCOPENAME/B1 %s\n",yytext);
+                      g_currentMemberFlowInfoElse = FALSE;  // check the status of not "else if"
 					  addType();
 					  generateClassOrGlobalLink(*g_code,yytext);
   					  g_name+=yytext; 
@@ -2893,6 +3011,7 @@ printf("<MemberCall SCOPENAME/B %s\n",yytext);
   					}
 <Body>[,=;\[]				{
     printf("body013  %s\n",yytext);
+                      g_currentMemberFlowInfoElse = FALSE;  // check the status of not "else if"
 					  if (g_insideObjC && *yytext=='[')
 					  {
 					    //printf("Found start of ObjC call!\n");
@@ -3195,7 +3314,7 @@ printf("<MemberCall SCOPENAME/B %s\n",yytext);
                                           g_code->codify(yytext);
                                         }
 <MemberCall2,FuncCall>"("		{
-                            printf("FuncCall8 \( %s\n",yytext);
+                            printf("FuncCall8 \( %s g_bracketCount=%d\n",yytext,g_bracketCount);
 					  g_parmType.resize(0);g_parmName.resize(0);
   					  g_code->codify(yytext);
   					  g_bracketCount++; 
@@ -3218,7 +3337,7 @@ printf("<MemberCall SCOPENAME/B %s\n",yytext);
   					  g_code->codify(yytext);
   					}
 <MemberCall,MemberCall2,FuncCall>("*"{B}*)?")"	{ 
-                            printf("FuncCall B? %s\n",yytext);
+                            printf("FuncCall B? %s g_bracketCount=%d\n",yytext,g_bracketCount);
                                           if (yytext[0]==')') // no a pointer cast
                                           {
                                             //printf("addVariable(%s,%s)\n",g_parmType.data(),g_parmName.data());
@@ -3250,6 +3369,60 @@ printf("<MemberCall SCOPENAME/B %s\n",yytext);
 					      BEGIN( CallEnd ); 
 					    }
 					  }
+                      if(g_bracketCount == 0){ 
+                        //printf("FuncCall B? set m_condtion  g_bracketCount=%d STR=%s\n",g_bracketCount,g_currentMemberFlowInfo.m_str.data());
+                        printf("FuncCall B? set m_condtion  g_bracketCount=%d g_currentMemberFlowInfoBool=%d STR=%s\n",g_bracketCount,g_currentMemberFlowInfoBool , g_currentMemberFlowInfo.getFlowString());
+                        //g_currentMemberFlowInfo.m_condition = g_currentMemberFlowInfo.m_str; 
+                        // g_currentMemberFlowInfo.m_str = "";
+                        if(g_currentMemberFlowInfoBool){
+                            g_currentMemberFlowInfoBool = FALSE;
+                            printf("<Body FLOWEND flowInfo size=%d g_currentMemberDef=%p\n",g_currentMemberDef->m_flowInfo.count(),g_currentMemberDef);
+                            printf("bodyCurlyCount=%d , function name=%s , line=%d\n", g_bodyCurlyCount,g_currentMemberDef->definition(),g_yyLineNr);
+                            if( (TRUE == g_currentMemberFlowInfoElse)
+                             && ( MemberFlowInfo::If == g_currentMemberFlowInfo.m_flow ) ){
+                                // else if
+                                g_currentMemberFlowInfo.m_flow = MemberFlowInfo::ElseIf;
+                                g_currentMemberFlowInfo.setHasCondition(MemberFlowInfo::ElseIf);
+                                g_currentMemberDef->m_flowInfo.removeLast();       // remove else 
+                                printf("<Body FLOWEND flowInfo size=%d g_currentMemberDef=%p elseif\n",g_currentMemberDef->m_flowInfo.count(),g_currentMemberDef);
+                                g_currentMemberDef->addFlowInfo(g_currentMemberFlowInfo.m_flow,g_currentMemberFlowInfo.m_condition,g_bodyCurlyCount,g_currentMemberDef->definition(),g_yyLineNr);
+                            } else {
+                                // isolated if <- it is not "else if"
+                                g_currentMemberDef->addFlowInfo(g_currentMemberFlowInfo.m_flow,g_currentMemberFlowInfo.m_condition,g_bodyCurlyCount,g_currentMemberDef->definition(),g_yyLineNr);
+                                printf("CK condition %s\n",g_currentMemberFlowInfo.m_condition.data());
+                                printf("CK function %s\n",g_currentMemberDef->definition());
+                                printf("CK  line %d\n", g_yyLineNr);
+                            }
+                            printf("<Body FLOWEND flowInfo size=%d\n",g_currentMemberDef->m_flowInfo.count());
+                            /*
+                            MemberFlowInfo *mfi;
+                            for(int i=0;i<g_currentMemberDef->m_flowInfo.count();i++){
+                                mfi = g_currentMemberDef->m_flowInfo.at(i);
+                                printf("[%d] flow:%s has:%d depth:%d f:%s l:%d cond:%s\n",i,mfi->getFlowString(),mfi->m_hasCondition,mfi->m_depth,mfi->m_filename.data(),mfi->m_lineNr,mfi->m_condition.data());
+                            }
+                            */
+                            QListIterator<MemberFlowInfo> mfil(g_currentMemberDef->m_flowInfo);
+                            MemberFlowInfo *mfi;
+                            int i=0;
+                            for (mfil.toFirst();(mfi=mfil.current());++mfil,++i){
+                                printf("[%d] flow:%s has:%d depth:%d f:%s l:%d cond:%s\n",i,mfi->getFlowString(),mfi->m_hasCondition,mfi->m_depth,qPrint(mfi->m_filename),mfi->m_lineNr,qPrint(mfi->m_condition));
+                                /*
+                                printf("[%d] flow:%d,%s has:%d depth:%d f:%s l:%d cond:%s\n"
+                                    ,i
+                                    ,g_currentMemberDef->m_flowInfo[i].m_flow
+                                    ,g_currentMemberDef->m_flowInfo[i].getFlowString()
+                                    ,g_currentMemberDef->m_flowInfo[i].m_hasCondition
+                                    ,g_currentMemberDef->m_flowInfo[i].m_depth
+                                    ,g_currentMemberDef->m_flowInfo[i].m_filename.data()
+                                    ,g_currentMemberDef->m_flowInfo[i].m_lineNr
+                                    ,g_currentMemberDef->m_flowInfo[i].m_condition.data()
+                                    );
+                                */
+                            }
+
+
+                        }
+                      }
 					}
 <CallEnd>[ \t\n]*			{ codifyLines(yytext); }
   /*

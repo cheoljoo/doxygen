@@ -3135,6 +3135,98 @@ static Definition *getClassFromType(Definition *scope,const QCString &type,SrcLa
 }
 #endif
 
+void MemberFlowInfo::setFlow(const char* flowString)
+{
+  if(!strncmp(flowString,"break",strlen("break"))){
+          this->m_flow = MemberFlowInfo::Break;
+          this->m_hasCondition = FALSE;
+  } else if(!strncmp(flowString,"do",strlen("do"))){
+          this->m_flow = MemberFlowInfo::Do;
+          this->m_hasCondition = FALSE;
+  } else if(!strncmp(flowString,"else",strlen("else"))){
+          this->m_flow = MemberFlowInfo::Else;
+          this->m_hasCondition = FALSE;
+  } else if(!strncmp(flowString,"return",strlen("return"))){
+          this->m_flow = MemberFlowInfo::Return;
+          this->m_hasCondition = FALSE;
+  } else if(!strncmp(flowString,"switch",strlen("switch"))){
+          this->m_flow = MemberFlowInfo::Switch;
+          this->m_hasCondition = TRUE;
+  } else if(!strncmp(flowString,"case",strlen("case"))){
+          this->m_flow = MemberFlowInfo::Case;
+          this->m_hasCondition = TRUE;
+  } else if(!strncmp(flowString,"for",strlen("for"))){
+          this->m_flow = MemberFlowInfo::For;
+          this->m_hasCondition = TRUE;
+  } else if(!strncmp(flowString,"foreach",strlen("foreach"))){
+          this->m_flow = MemberFlowInfo::ForEach;
+          this->m_hasCondition = TRUE;
+  } else if(!strncmp(flowString,"if",strlen("if"))){
+          this->m_flow = MemberFlowInfo::If;
+          this->m_hasCondition = TRUE;
+  } else if(!strncmp(flowString,"while",strlen("while"))){
+          this->m_flow = MemberFlowInfo::While;
+          this->m_hasCondition = TRUE;
+  }
+
+  return ;
+}
+
+const char* MemberFlowInfo::getFlowString()
+{
+    switch(this->m_flow){
+        case MemberFlowInfo::Break :
+            return "break";
+        case MemberFlowInfo::Do :
+            return "do";
+        case MemberFlowInfo::Else :
+            return "else";
+        case MemberFlowInfo::Return :
+            return "return";
+        case MemberFlowInfo::Switch :
+            return "switch";
+        case MemberFlowInfo::Case :
+            return "case";
+        case MemberFlowInfo::For :
+            return "for";
+        case MemberFlowInfo::ForEach :
+            return "foreach";
+        case MemberFlowInfo::If :
+            return "if";
+        case MemberFlowInfo::While :
+            return "while";
+        case MemberFlowInfo::ElseIf :
+            return "elseif";
+        default:
+            break;
+    };
+
+    return "None";
+}
+
+void MemberFlowInfo::setHasCondition(MemberFlowInfo::FlowKW flow)
+{
+    switch(flow){
+        case MemberFlowInfo::Break :
+        case MemberFlowInfo::Do :
+        case MemberFlowInfo::Else :
+        case MemberFlowInfo::Return :
+            this->m_hasCondition = FALSE;
+        case MemberFlowInfo::Switch :
+        case MemberFlowInfo::Case :
+        case MemberFlowInfo::For :
+        case MemberFlowInfo::ForEach :
+        case MemberFlowInfo::If :
+        case MemberFlowInfo::While :
+        case MemberFlowInfo::ElseIf :
+            this->m_hasCondition = TRUE;
+        default:
+            break;
+    };
+
+    return ;
+}
+
 QCString MemberDef::fieldType() const
 {
   QCString type = m_impl->accessorType;
@@ -5012,11 +5104,13 @@ void MemberDef::invalidateCachedArgumentTypes()
   invalidateCachedTypesInArgumentList(m_impl->declArgList);
 }
 
-void MemberDef::addFlowInfo(MemberFlowInfo::FlowKW flow,QCString condition,int depth,QCString filename,int line)
+void MemberDef::addFlowInfo(MemberFlowInfo::FlowKW flow,QCString condition,int depth,const char* filename,int line)
 {
   MemberFlowInfo mfi(flow,condition,depth,filename,line);
+  //mfi.setFlow(flowString);
   m_flowInfo.append(&mfi);
   //m_flowInfo.insert(index,&mfi);
+  printf("[ADDFLOW] flow:%s has:%d depth:%d f:%s l:%d cond:%s\n",mfi.getFlowString(),mfi.m_hasCondition,mfi.m_depth,qPrint(mfi.m_filename),mfi.m_lineNr,qPrint(mfi.m_condition));
 }
 
 void MemberDef::addFlowKeyWord()
