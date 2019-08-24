@@ -3140,6 +3140,9 @@ void MemberFlowInfo::setFlow(const char* flowString)
   if(!strncmp(flowString,"break",strlen("break"))){
           this->m_flow = MemberFlowInfo::Break;
           this->m_hasCondition = FALSE;
+  } else if(!strncmp(flowString,"default",strlen("default"))){
+          this->m_flow = MemberFlowInfo::Default;
+          this->m_hasCondition = FALSE;
   } else if(!strncmp(flowString,"do",strlen("do"))){
           this->m_flow = MemberFlowInfo::Do;
           this->m_hasCondition = FALSE;
@@ -3177,6 +3180,8 @@ const char* MemberFlowInfo::getFlowString()
     switch(this->m_flow){
         case MemberFlowInfo::Break :
             return "break";
+        case MemberFlowInfo::Default :
+            return "default";
         case MemberFlowInfo::Do :
             return "do";
         case MemberFlowInfo::Else :
@@ -3208,6 +3213,7 @@ void MemberFlowInfo::setHasCondition(MemberFlowInfo::FlowKW flow)
 {
     switch(flow){
         case MemberFlowInfo::Break :
+        case MemberFlowInfo::Default :
         case MemberFlowInfo::Do :
         case MemberFlowInfo::Else :
         case MemberFlowInfo::Return :

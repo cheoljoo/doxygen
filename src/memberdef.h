@@ -44,7 +44,7 @@ struct TagInfo;
  * @brief MemberFlowInfo is Flow keyword and condition information for each member.
  *
  * @details break/do/else/return do not have condition.  switch/case/for/if/while have condition.
- * @details (c++) switch case -> (plantuml) if elseif  endif
+ * @details (c++) switch case default -> (plantuml) if elseif  endif
  * @details (c++) if else     -> (plantuml) if else endif
  * @details (c++) if else if  -> (plantuml) if elseif  endif
  * @details (c++) do while    -> (plantuml) repeat ~ repeat while
@@ -59,6 +59,7 @@ class MemberFlowInfo
         enum FlowKW { 
             None          ,
             Break         ,
+            Default       ,
             Do            ,
             Else          ,
             Return        ,

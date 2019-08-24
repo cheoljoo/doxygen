@@ -94,6 +94,7 @@ static MemberDef *   g_currentMemberDef;
 static MemberFlowInfo g_currentMemberFlowInfo;
 static bool g_currentMemberFlowInfoBool = FALSE;
 static bool g_currentMemberFlowInfoElse = FALSE;
+static bool g_currentMemberFlowInfoCase = FALSE;
 static bool          g_includeCodeFragment;
 static const char *  g_currentFontClass;
 static bool          g_searchingForBody;
@@ -1946,7 +1947,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
   					}
 <Body,ClassVar,Bases>"-"|"+"		{
     printf("<Body -+ %s\n",yytext);
-                      if( (g_bracketCount > 0) && (TRUE == g_currentMemberFlowInfoBool) ){ g_currentMemberFlowInfo.m_condition += yytext; }
+                      if(TRUE == g_currentMemberFlowInfoBool ){ g_currentMemberFlowInfo.m_condition += yytext; }
 					  if (!g_insideObjC || g_insideBody)
 					  { 
   					    g_code->codify(yytext);
@@ -2624,6 +2625,11 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
                       } else {
                           g_currentMemberFlowInfoBool = TRUE;
                       }
+                      if( MemberFlowInfo::Case == g_currentMemberFlowInfo.m_flow ){
+                          printf("<Body FLOWCONDITION a-z set g_currentMemberFlowInfoCase = TRUE\n");
+                          g_currentMemberFlowInfoCase = TRUE;
+                          g_currentMemberFlowInfoBool = TRUE;
+                      }
                                             printf("<Body FLOWKW/BN declaration=%s\n",g_currentMemberDef->declaration());
                                             printf("<Body FLOWKW/BN definition=%s\n",g_currentMemberDef->definition());
                                             printf("<Body FLOWKW/BN typeString=%s\n",g_currentMemberDef->typeString());
@@ -2865,6 +2871,7 @@ printf("<Body SCOPENAME2 B %s\n",yytext);
 					}
 <Body>{SCOPENAME}/{BN}*[:;,)\]]		{ // "int var;" or "var, var2" or "debug(f) macro" , or int var : 5;
 printf("<Body SCOPENAME/BN %s\n",yytext);
+                      if(TRUE == g_currentMemberFlowInfoBool ){ g_currentMemberFlowInfo.m_condition += yytext; }
 					  addType();
 					  // changed this to generateFunctionLink, see bug 624514
 					  //generateClassOrGlobalLink(*g_code,yytext,FALSE,TRUE);
@@ -2873,7 +2880,7 @@ printf("<Body SCOPENAME/BN %s\n",yytext);
 					}
 <Body>{SCOPENAME}/{B}* 			{ // p->func()
 printf("<Body SCOPENAME/B1 %s\n",yytext);
-                      if( (g_bracketCount > 0) && (TRUE == g_currentMemberFlowInfoBool) ){ g_currentMemberFlowInfo.m_condition += yytext; }
+                      if(TRUE == g_currentMemberFlowInfoBool ){ g_currentMemberFlowInfo.m_condition += yytext; }
                       g_currentMemberFlowInfoElse = FALSE;  // check the status of not "else if"
 					  addType();
 					  generateClassOrGlobalLink(*g_code,yytext);
@@ -2913,7 +2920,7 @@ printf("<Body SCOPENAME/B3 %s\n",yytext);
                                         }
 <FuncCall,Body,MemberCall,MemberCall2,SkipInits,InlineInit>\"	{
     printf("<funcCall 2 %s\n",yytext);
-                      if( (g_bracketCount > 0) && (TRUE == g_currentMemberFlowInfoBool) ){ g_currentMemberFlowInfo.m_condition += yytext; }
+                      if(TRUE == g_currentMemberFlowInfoBool ){ g_currentMemberFlowInfo.m_condition += yytext; }
 					  startFontClass("stringliteral");
   					  g_code->codify(yytext);
   					  g_lastStringContext=YY_START;
@@ -2922,7 +2929,7 @@ printf("<Body SCOPENAME/B3 %s\n",yytext);
   					}
 <FuncCall,Body,MemberCall,MemberCall2,SkipInits,InlineInit>\'	{
     printf("<funcCall 3 %s\n",yytext);
-                      if( (g_bracketCount > 0) && (TRUE == g_currentMemberFlowInfoBool) ){ g_currentMemberFlowInfo.m_condition += yytext; }
+                      if(TRUE == g_currentMemberFlowInfoBool ){ g_currentMemberFlowInfo.m_condition += yytext; }
 					  startFontClass("stringliteral");
   					  g_code->codify(yytext);
   					  g_lastStringContext=YY_START;
@@ -2931,7 +2938,7 @@ printf("<Body SCOPENAME/B3 %s\n",yytext);
   					}
 <SkipString>[^\"\\\r\n]*		{ 
     printf("<skipstring %s\n",yytext);
-                      if( (g_bracketCount > 0) && (TRUE == g_currentMemberFlowInfoBool) ){ g_currentMemberFlowInfo.m_condition += yytext; }
+                      if(TRUE == g_currentMemberFlowInfoBool ){ g_currentMemberFlowInfo.m_condition += yytext; }
   					  g_code->codify(yytext);
 					}
 <SkipStringS>[^\'\\\r\n]*		{
@@ -2943,7 +2950,7 @@ printf("<Body SCOPENAME/B3 %s\n",yytext);
   					}
 <SkipString>@?\"			{
     printf("<skipstring  @\"%s\n",yytext);
-                      if( (g_bracketCount > 0) && (TRUE == g_currentMemberFlowInfoBool) ){ g_currentMemberFlowInfo.m_condition += yytext; }
+                      if(TRUE == g_currentMemberFlowInfoBool ){ g_currentMemberFlowInfo.m_condition += yytext; }
   					  g_code->codify(yytext);
 					  endFontClass();
   					  BEGIN( g_lastStringContext );
@@ -2987,14 +2994,19 @@ printf("<Body SCOPENAME/B3 %s\n",yytext);
   					  codifyLines(yytext);
   					}
 <Body>":"				{
-    printf("body009  %s\n",yytext);
-                      if( (g_bracketCount > 0) && (TRUE == g_currentMemberFlowInfoBool) ){ g_currentMemberFlowInfo.m_condition += yytext; }
+    printf("body009  %s Bool%d Case%d Else%d\n",yytext,g_currentMemberFlowInfoBool,g_currentMemberFlowInfoCase,g_currentMemberFlowInfoElse);
+                      if(TRUE == g_currentMemberFlowInfoCase ){ 
+                          g_currentMemberFlowInfoBool = FALSE;
+                          g_currentMemberFlowInfoCase = FALSE;
+                          g_currentMemberDef->addFlowInfo(g_currentMemberFlowInfo);
+                      }
+                      if(TRUE == g_currentMemberFlowInfoBool ){ g_currentMemberFlowInfo.m_condition += yytext; }
   					  g_code->codify(yytext);
   					  g_name.resize(0);g_type.resize(0);
   					}
 <Body>"<"				{
     printf("body010  %s\n",yytext);
-                      if( (g_bracketCount > 0) && (TRUE == g_currentMemberFlowInfoBool) ){ g_currentMemberFlowInfo.m_condition += yytext; }
+                      if(TRUE == g_currentMemberFlowInfoBool ){ g_currentMemberFlowInfo.m_condition += yytext; }
   					  if (g_insideTemplate)
 					  {
 					    g_sharpCount++;
@@ -3003,7 +3015,7 @@ printf("<Body SCOPENAME/B3 %s\n",yytext);
   					}
 <Body>">"				{
     printf("body011  %s\n",yytext);
-                      if( (g_bracketCount > 0) && (TRUE == g_currentMemberFlowInfoBool) ){ g_currentMemberFlowInfo.m_condition += yytext; }
+                      if(TRUE == g_currentMemberFlowInfoBool ){ g_currentMemberFlowInfo.m_condition += yytext; }
   					  if (g_insideTemplate)
 					  {
 					    if (--g_sharpCount<=0)
@@ -3021,7 +3033,7 @@ printf("<Body SCOPENAME/B3 %s\n",yytext);
   					}
 <Body>"."|"->"				{ 
     printf("body012  %s\n",yytext);
-                      if( (g_bracketCount > 0) && (TRUE == g_currentMemberFlowInfoBool) ){ g_currentMemberFlowInfo.m_condition += yytext; }
+                      if(TRUE == g_currentMemberFlowInfoBool ){ g_currentMemberFlowInfo.m_condition += yytext; }
   				          if (yytext[0]=='-') // -> could be overloaded
 					  {
 					    updateCallContextForSmartPointer();
@@ -3032,7 +3044,8 @@ printf("<Body SCOPENAME/B3 %s\n",yytext);
 					}
 <MemberCall>{SCOPETNAME}/{BN}*"(" 	{
 printf("<MemberCall SCOPENAME/BN %s\n",yytext);
-                      if( (g_bracketCount > 0) && (TRUE == g_currentMemberFlowInfoBool) ){ g_currentMemberFlowInfo.m_condition += yytext; }
+                      if(TRUE == g_currentMemberFlowInfoBool ){ g_currentMemberFlowInfo.m_condition += yytext; }
+                      //if( (g_bracketCount > 0) && (TRUE == g_currentMemberFlowInfoBool) ){ g_currentMemberFlowInfo.m_condition += yytext; }
 					  if (g_theCallContext.getScope())
 					  {
 					    if (!generateClassMemberLink(*g_code,g_theCallContext.getScope(),yytext))
@@ -3061,7 +3074,7 @@ printf("<MemberCall SCOPENAME/BN %s\n",yytext);
   					}
 <MemberCall>{SCOPENAME}/{B}*		{
 printf("<MemberCall SCOPENAME/B %s\n",yytext);
-                      if( (g_bracketCount > 0) && (TRUE == g_currentMemberFlowInfoBool) ){ g_currentMemberFlowInfo.m_condition += yytext; }
+                      if(TRUE == g_currentMemberFlowInfoBool ){ g_currentMemberFlowInfo.m_condition += yytext; }
 					  if (g_theCallContext.getScope())
 					  {
 					    DBG_CTX((stderr,"g_theCallContext.getClass()=%p\n",g_theCallContext.getScope()));
@@ -3084,7 +3097,7 @@ printf("<MemberCall SCOPENAME/B %s\n",yytext);
   					}
 <Body>[,=;\[]				{
     printf("body013  %s\n",yytext);
-                      if( (g_bracketCount > 0) && (TRUE == g_currentMemberFlowInfoBool) ){ g_currentMemberFlowInfo.m_condition += yytext; }
+                      if(TRUE == g_currentMemberFlowInfoBool ){ g_currentMemberFlowInfo.m_condition += yytext; }
                       g_currentMemberFlowInfoElse = FALSE;  // check the status of not "else if"
 					  if (g_insideObjC && *yytext=='[')
 					  {
@@ -3281,12 +3294,12 @@ printf("<MemberCall SCOPENAME/B %s\n",yytext);
 					}
 <Body>[0-9]+				{
     printf("body014  %s\n",yytext);
-                      if( (g_bracketCount > 0) && (TRUE == g_currentMemberFlowInfoBool) ){ g_currentMemberFlowInfo.m_condition += yytext; }
+                      if(TRUE == g_currentMemberFlowInfoBool ){ g_currentMemberFlowInfo.m_condition += yytext; }
 					  g_code->codify(yytext);
 					}
 <Body>[0-9]+[xX][0-9A-Fa-f]+		{
     printf("body015  %s\n",yytext);
-                      if( (g_bracketCount > 0) && (TRUE == g_currentMemberFlowInfoBool) ){ g_currentMemberFlowInfo.m_condition += yytext; }
+                      if(TRUE == g_currentMemberFlowInfoBool ){ g_currentMemberFlowInfo.m_condition += yytext; }
 					  g_code->codify(yytext);
 					}
 <MemberCall2,FuncCall>{KEYWORD}/([^a-z_A-Z0-9]) {
@@ -3350,7 +3363,7 @@ printf("<MemberCall SCOPENAME/B %s\n",yytext);
 					}
 <FuncCall>";"				{ // probably a cast, not a function call
     printf("<funcCall 5 %s\n",yytext);
-                      if( (g_bracketCount > 0) && (TRUE == g_currentMemberFlowInfoBool) ){ g_currentMemberFlowInfo.m_condition += yytext; }
+                      if(TRUE == g_currentMemberFlowInfoBool ){ g_currentMemberFlowInfo.m_condition += yytext; }
   					  g_code->codify(yytext);
 					  g_inForEachExpression = FALSE;
 					  BEGIN( Body );
