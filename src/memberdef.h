@@ -72,11 +72,13 @@ class MemberFlowInfo
         };
 
         MemberFlowInfo() : m_flow(None),m_hasCondition(FALSE),m_condition(""),m_depth(0),m_filename("sample"),m_lineNr(-1){}
+        MemberFlowInfo(MemberFlowInfo& src) : m_flow(src.m_flow),m_hasCondition(src.m_hasCondition),m_condition(src.m_condition),m_depth(src.m_depth),m_filename(src.m_filename),m_lineNr(src.m_lineNr){}
         MemberFlowInfo(FlowKW flow,bool hasCondition,QCString condition ="",int depth=0,QCString filename="",int line=-1) : m_flow(flow),m_hasCondition(hasCondition),m_condition(condition),m_depth(depth),m_filename(filename),m_lineNr(line){}
         MemberFlowInfo(FlowKW flow,QCString condition ="",int depth=0,QCString filename="",int line=-1) : m_flow(flow),m_condition(condition),m_depth(depth),m_filename(filename),m_lineNr(line){
             setHasCondition(flow);
         }
-        virtual ~MemberFlowInfo(){}
+        virtual ~MemberFlowInfo(){ }
+
         //QCString m_str;
         FlowKW m_flow;  //* enum FlowKW
         bool m_hasCondition;
@@ -329,7 +331,8 @@ class MemberDef : public Definition
 
     // flow keyword and condition
     QList<MemberFlowInfo> m_flowInfo;
-    void addFlowInfo(MemberFlowInfo::FlowKW flow,QCString condition,int depth,const char* filename,int line);
+    //void addFlowInfo(MemberFlowInfo::FlowKW flow,QCString condition,int depth,const char* filename,int line);
+    void addFlowInfo(MemberFlowInfo mfi);
 
     //-----------------------------------------------------------------------------------
     // ----  setters -----

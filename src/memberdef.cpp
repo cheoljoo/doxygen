@@ -5104,13 +5104,32 @@ void MemberDef::invalidateCachedArgumentTypes()
   invalidateCachedTypesInArgumentList(m_impl->declArgList);
 }
 
+/*
 void MemberDef::addFlowInfo(MemberFlowInfo::FlowKW flow,QCString condition,int depth,const char* filename,int line)
 {
   MemberFlowInfo mfi(flow,condition,depth,filename,line);
+  printf("[ADDFLOW] func:%s flow:%s has:%d depth:%d f:%s l:%d cond:%s\n",declaration(),mfi.getFlowString(),mfi.m_hasCondition,mfi.m_depth,qPrint(mfi.m_filename),mfi.m_lineNr,qPrint(mfi.m_condition));
   //mfi.setFlow(flowString);
   m_flowInfo.append(&mfi);
   //m_flowInfo.insert(index,&mfi);
-  printf("[ADDFLOW] flow:%s has:%d depth:%d f:%s l:%d cond:%s\n",mfi.getFlowString(),mfi.m_hasCondition,mfi.m_depth,qPrint(mfi.m_filename),mfi.m_lineNr,qPrint(mfi.m_condition));
+}
+*/
+
+void MemberDef::addFlowInfo(MemberFlowInfo mfi)
+{
+  MemberFlowInfo* cpmfi = new MemberFlowInfo(mfi);
+  //printf("[ADDFLOW] func:%s flow:%s has:%d depth:%d f:%s l:%d cond:%s\n",declaration(),mfi.getFlowString(),mfi.m_hasCondition,mfi.m_depth,qPrint(mfi.m_filename),mfi.m_lineNr,qPrint(mfi.m_condition));
+  //mfi.setFlow(flowString);
+  m_flowInfo.append(cpmfi);
+  printf("[ADDFLOW] func:%s flow:%s has:%d depth:%d f:%s l:%d cond:%s\n",declaration(),cpmfi->getFlowString(),cpmfi->m_hasCondition,cpmfi->m_depth,qPrint(cpmfi->m_filename),cpmfi->m_lineNr,qPrint(cpmfi->m_condition));
+  //m_flowInfo.insert(index,&mfi);
+
+  QListIterator<MemberFlowInfo> mfil(m_flowInfo);
+  MemberFlowInfo *pmfi;
+  int i=0;
+  for (mfil.toFirst();(pmfi=mfil.current());++mfil,++i){
+      printf("[%d] flow:%s has:%d depth:%d f:%s l:%d cond:%s\n",i,pmfi->getFlowString(),pmfi->m_hasCondition,pmfi->m_depth,qPrint(pmfi->m_filename),pmfi->m_lineNr,qPrint(pmfi->m_condition));
+  }
 }
 
 void MemberDef::addFlowKeyWord()
