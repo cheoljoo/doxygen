@@ -1940,6 +1940,9 @@ void PerlModGenerator::generatePerlModForClass(ClassDef *cd)
   m_output.openHash()
     .addFieldQuotedString("name", cd->name());
   
+// charles : make plantuml for class relations
+//  base and sub Classes
+// consider inner class 
   if (cd->baseClasses())
   {
 ;;printf("%s base class\n",__PRETTY_FUNCTION__);
@@ -1984,6 +1987,7 @@ void PerlModGenerator::generatePerlModForClass(ClassDef *cd)
     m_output.closeList();
   }
 
+// charles : not need in markdown
   IncludeInfo *ii=cd->includeInfo();
   if (ii)
   {
@@ -2003,7 +2007,10 @@ void PerlModGenerator::generatePerlModForClass(ClassDef *cd)
     }
   }
 
+  // charles : I should add template example for this session.
   addTemplateList(cd,m_output);
+  // charles : all_members hash - this is member list 
+  //    I should add all member types example for test.
   addListOfAllMembers(cd);
   if (cd->getMemberGroupSDict())
   {
@@ -2011,6 +2018,8 @@ void PerlModGenerator::generatePerlModForClass(ClassDef *cd)
     MemberGroupSDict::Iterator mgli(*cd->getMemberGroupSDict());
     MemberGroup *mg;
     for (;(mg=mgli.current());++mgli)
+      // charles :  user_defined section
+      // charles : not need in markdown
       generatePerlModSection(cd,mg->members(),"user_defined",mg->header());
   }
 
