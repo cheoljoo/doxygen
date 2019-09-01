@@ -1,4 +1,91 @@
-Doxygen
+# Draw FlowChart automatically with plantuml from your source code
+- it is not sufficient for doxygen. But , I make this edition (version) briefly to help fast.
+- Use this function when you make a flow chart for ASPICE.
+
+## result example [examples/flow.cpp](./examples/flow.cpp)
+
+- This is auto-generated result ( visual studio code) from source code.
+![Result1](./doc/FC1.png)
+
+- nested case:
+![Result2](./doc/FC2.png)
+
+
+	- It gives the detailed branch counts (# of test cases) with flow charts.  
+
+## how to run
+
+- doxygen compile 
+    - git clone doxygen   ( git clone -b  190830/flowKeywordsMakeFileDirectly  https://github.com/cheoljoo/doxygen.git)
+    - http://www.doxygen.nl/manual/install.html
+- example : 
+    - flow.cpp [examples/flow.cpp](./examples/flow.cpp)
+    - Doxyfile
+		- OUTPUT_TEXT_DIRECTION  = YES
+		- EXTRACT_ALL            = YES
+		- EXTRACT_PRIVATE        = YES
+		- EXTRACT_STATIC         = YES
+		- EXTRACT_LOCAL_METHODS  = YES
+		- RECURSIVE              = YES
+		- GENERATE_TREEVIEW      = YES
+		- GENERATE_PERLMOD       = YES
+		- PERLMOD_LATEX          = YES
+		- TEMPLATE_RELATIONS     = YES
+		- CALL_GRAPH             = YES
+		- CALLER_GRAPH           = YES
+- cd doxygen/build/bin/ 
+    - put flow.cpp and Doxyfile (edited files) in doxygen/build/bin/
+    - ./doxygen
+    - generated result : plantuml.md 
+- Try with your code!!!
+
+## how to show the result (plantuml.md)
+- this is plantuml file
+- you can show the result with vcode or atom editor ( need "markdown preview enhanced" plugin)
+
+
+## test case 
+    - supports nested combination
+    - if ~
+    - if ~ else
+    - if ~ else if ~ else ~
+    - for ~
+    - while ~
+    - do ~ while
+    - switch ~ case ~ ...  default ~
+    - enum case
+
+### weak point & solution
+- do not give proper result
+	- ```cpp
+    if(condition)
+        if (condition)
+		```
+    - this is nested if. but , doxygen code.l does not distinguish it. so I can not generate the right result.
+    - solution : you use brace for all if as the following
+    	- ```cpp
+    		if(condition){
+        		if (condition){
+        		}
+    		}
+    		```
+
+
+# relation between flow statement and plantuml
+ * @details (c++) switch case default -> (plantuml) if elseif  endif
+ * @details (c++) if else     -> (plantuml) if else endif
+ * @details (c++) if else if  -> (plantuml) if elseif  endif
+ * @details (c++) do while    -> (plantuml) repeat ~ repeat while
+ * @details (c++) while       -> (plantuml) while ~ endwhile
+ * @details (c++) for         -> (plantuml) while ~ endwhile
+
+
+
+
+
+
+
+# Doxygen
 ===============
 [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=9HHLRBCC8B2B8)
 
