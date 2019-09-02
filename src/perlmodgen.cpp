@@ -1598,8 +1598,8 @@ static void addPerlModDocBlock(PerlModOutput &output,
 			    MemberDef *md,
 			    const QCString &text)
 {
-;;printf("%s name=%s\n",__PRETTY_FUNCTION__,name);
   QCString stext = text.stripWhiteSpace();
+;;printf("%s name=%s text=%s\n",__PRETTY_FUNCTION__,name,qPrint(stext));
   if (stext.isEmpty())
     output.addField(name).add("{}");
   else {

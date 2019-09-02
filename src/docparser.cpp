@@ -7515,11 +7515,11 @@ DocRoot *validatingParseDoc(const char *fileName,int startLine,
                             bool isExample, const char *exampleName,
                             bool singleLine, bool linkFromIndex)
 {
-  //printf("validatingParseDoc(%s,%s)=[%s]\n",ctx?ctx->name().data():"<none>",
-  //                                     md?md->name().data():"<none>",
-  //                                     input);
-  //printf("========== validating %s at line %d\n",fileName,startLine);
-  //printf("---------------- input --------------------\n%s\n----------- end input -------------------\n",input);
+  printf("validatingParseDoc(%s,%s)=[%s]\n",ctx?ctx->name().data():"<none>",
+                                       md?md->name().data():"<none>",
+                                       input);
+  printf("========== validating %s at line %d\n",fileName,startLine);
+  printf("---------------- input --------------------\n%s\n----------- end input -------------------\n",input);
   //g_token = new TokenInfo;
 
   // store parser state so we can re-enter this function if needed
