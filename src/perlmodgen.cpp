@@ -244,7 +244,7 @@ void PerlModOutput::iaddQuoted(const char *s)
   
 void PerlModOutput::iaddField(const char *s)
 {
-;;printf("%s %s\n",__PRETTY_FUNCTION__,s);
+;;printf("%s s=%s =>\n",__PRETTY_FUNCTION__,s);
   continueBlock();
   m_stream->add(s);
   m_stream->add(m_pretty ? " => " : "=>");
@@ -252,7 +252,7 @@ void PerlModOutput::iaddField(const char *s)
 
 void PerlModOutput::iaddFieldQuotedChar(const char *field, char content)
 {
-;;printf("%s %s\n",__PRETTY_FUNCTION__,field);
+;;printf("%s field=%s content=%c\n",__PRETTY_FUNCTION__,field,content);
   iaddField(field);
   m_stream->add('\'');
   if ((content == '\'') || (content == '\\'))
@@ -265,7 +265,7 @@ void PerlModOutput::iaddFieldQuotedString(const char *field, const char *content
 {
   if (content == 0)
     return;
-;;printf("%s [%s] [%s]\n",__PRETTY_FUNCTION__,field,content);
+;;printf("%s field=%s content=%s\n",__PRETTY_FUNCTION__,field,content);
   iaddField(field);
   m_stream->add('\'');
   iaddQuoted(content);
@@ -274,7 +274,7 @@ void PerlModOutput::iaddFieldQuotedString(const char *field, const char *content
 
 void PerlModOutput::iopen(char c, const char *s)
 {
-;;printf("%s [%c]\n",__PRETTY_FUNCTION__,c);
+;;printf("%s %c %s\n",__PRETTY_FUNCTION__,c,s);
   if (s != 0)
     iaddField(s);
   else
@@ -1605,8 +1605,11 @@ static void addPerlModDocBlock(PerlModOutput &output,
   else {
     DocNode *root = validatingParseDoc(fileName,lineNr,scope,md,stext,FALSE,0);
     output.openHash(name);
+;;printf("%s 1\n",__PRETTY_FUNCTION__);
     PerlModDocVisitor *visitor = new PerlModDocVisitor(output);
+;;printf("%s 2\n",__PRETTY_FUNCTION__);
     root->accept(visitor);
+;;printf("%s 3\n",__PRETTY_FUNCTION__);
     visitor->finish();
     output.closeHash();
     delete visitor;

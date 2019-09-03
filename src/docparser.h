@@ -187,6 +187,7 @@ template<class T> class CompAccept : public DocNode
     CompAccept() { m_children.setAutoDelete(TRUE); }
     void accept(DocVisitor *v) 
     {
+        printf("%s\n",__PRETTY_FUNCTION__);
       T *obj = dynamic_cast<T *>(this);
       v->visitPre(obj); 
       QListIterator<DocNode> cli(m_children);
@@ -242,7 +243,7 @@ class DocWord : public DocNode
     DocWord(DocNode *parent,const QCString &word);
     QCString word() const { return m_word; }
     Kind kind() const { return Kind_Word; }
-    void accept(DocVisitor *v) { v->visit(this); }
+    void accept(DocVisitor *v) { printf("%s\n",__PRETTY_FUNCTION__);v->visit(this); }
     virtual QString::Direction getTextDir() const { return QString(word()).direction(); };
     virtual QString::Direction getTextBasicDir() const { return QString(word()).basicDirection(); };
 
@@ -265,7 +266,7 @@ class DocLinkedWord : public DocNode
     QCString ref() const        { return m_ref; }
     QCString anchor() const     { return m_anchor; }
     QCString tooltip() const    { return m_tooltip; }
-    void accept(DocVisitor *v) { v->visit(this); }
+    void accept(DocVisitor *v) { printf("%s\n",__PRETTY_FUNCTION__);v->visit(this); }
     virtual QString::Direction getTextDir() const { return QString(word()).direction(); };
     virtual QString::Direction getTextBasicDir() const { return QString(word()).basicDirection(); };
 
@@ -286,7 +287,7 @@ class DocURL : public DocNode
       m_url(url), m_isEmail(isEmail) { m_parent=parent; }
     QCString url() const        { return m_url; }
     Kind kind() const          { return Kind_URL; }
-    void accept(DocVisitor *v) { v->visit(this); }
+    void accept(DocVisitor *v) { printf("%s\n",__PRETTY_FUNCTION__);v->visit(this); }
     bool isEmail() const       { return m_isEmail; }
     virtual QString::Direction getTextDir() const { return QString::DirLTR; };
     virtual QString::Direction getTextBasicDir() const { return QString::DirLTR; };
@@ -302,7 +303,7 @@ class DocLineBreak : public DocNode
   public:
     DocLineBreak(DocNode *parent) { m_parent=parent; }
     Kind kind() const          { return Kind_LineBreak; }
-    void accept(DocVisitor *v) { v->visit(this); }
+    void accept(DocVisitor *v) { printf("%s\n",__PRETTY_FUNCTION__);v->visit(this); }
 
   private:
 };
@@ -313,7 +314,7 @@ class DocHorRuler : public DocNode
   public:
     DocHorRuler(DocNode *parent) { m_parent = parent; }
     Kind kind() const          { return Kind_HorRuler; }
-    void accept(DocVisitor *v) { v->visit(this); }
+    void accept(DocVisitor *v) { printf("%s\n",__PRETTY_FUNCTION__);v->visit(this); }
 
   private:
 };
@@ -326,7 +327,7 @@ class DocAnchor : public DocNode
     Kind kind() const          { return Kind_Anchor; }
     QCString anchor() const    { return m_anchor; }
     QCString file() const      { return m_file; }
-    void accept(DocVisitor *v) { v->visit(this); }
+    void accept(DocVisitor *v) { printf("%s\n",__PRETTY_FUNCTION__);v->visit(this); }
 
   private:
     QCString  m_anchor;
@@ -344,7 +345,7 @@ class DocCite : public DocNode
     QCString ref() const         { return m_ref; }
     QCString anchor() const      { return m_anchor; }
     QCString text() const        { return m_text; }
-    void accept(DocVisitor *v) { v->visit(this); }
+    void accept(DocVisitor *v) { printf("%s\n",__PRETTY_FUNCTION__);v->visit(this); }
 
   private:
     QCString   m_file;
@@ -382,7 +383,7 @@ class DocStyleChange : public DocNode
     const char *styleString() const;
     bool enable() const                   { return m_enable; }
     uint position() const                 { return m_position; }
-    void accept(DocVisitor *v)            { v->visit(this); }
+    void accept(DocVisitor *v) { printf("%s\n",__PRETTY_FUNCTION__);v->visit(this); }
     const HtmlAttribList &attribs() const { return m_attribs; }
 
   private:
@@ -469,7 +470,7 @@ class DocSymbol : public DocNode
       m_symbol(s) { m_parent = parent; }
     SymType symbol() const     { return m_symbol; }
     Kind kind() const          { return Kind_Symbol; }
-    void accept(DocVisitor *v) { v->visit(this); }
+    void accept(DocVisitor *v) { printf("%s\n",__PRETTY_FUNCTION__);v->visit(this); }
     static SymType decodeSymbol(const QCString &symName);
 
   private:
@@ -484,7 +485,7 @@ class DocEmoji : public DocNode
     QCString name() const      { return m_symName; }
     int index() const          { return m_index; }
     Kind kind() const          { return Kind_Emoji; }
-    void accept(DocVisitor *v) { v->visit(this); }
+    void accept(DocVisitor *v) { printf("%s\n",__PRETTY_FUNCTION__);v->visit(this); }
 
   private:
     QCString m_symName;
@@ -499,7 +500,7 @@ class DocWhiteSpace : public DocNode
       m_chars(chars) { m_parent = parent; }
     Kind kind() const          { return Kind_WhiteSpace; }
     QCString chars() const     { return m_chars; }
-    void accept(DocVisitor *v) { v->visit(this); }
+    void accept(DocVisitor *v) { printf("%s\n",__PRETTY_FUNCTION__);v->visit(this); }
   private:
     QCString  m_chars;
 };
@@ -516,7 +517,7 @@ class DocVerbatim : public DocNode
     Type type() const            { return m_type; }
     QCString text() const        { return m_text; }
     QCString context() const     { return m_context; }
-    void accept(DocVisitor *v)   { v->visit(this); }
+    void accept(DocVisitor *v) { printf("%s\n",__PRETTY_FUNCTION__);v->visit(this); }
     bool isExample() const       { return m_isExample; }
     QCString exampleFile() const { return m_exampleFile; }
     QCString relPath() const     { return m_relPath; }
@@ -574,7 +575,7 @@ class DocInclude : public DocNode
     bool isExample() const       { return m_isExample; }
     QCString exampleFile() const { return m_exampleFile; }
     bool isBlock() const         { return m_isBlock; }
-    void accept(DocVisitor *v)   { v->visit(this); }
+    void accept(DocVisitor *v) { printf("%s\n",__PRETTY_FUNCTION__);v->visit(this); }
     void parse();
 
   private:
@@ -603,7 +604,7 @@ class DocIncOperator : public DocNode
     QCString text() const        { return m_text; }
     QCString pattern() const     { return m_pattern; }
     QCString context() const     { return m_context; }
-    void accept(DocVisitor *v)  { v->visit(this); }
+    void accept(DocVisitor *v) { printf("%s\n",__PRETTY_FUNCTION__);v->visit(this); }
     bool isFirst() const        { return m_isFirst; }
     bool isLast() const         { return m_isLast; }
     void markFirst(bool v=TRUE) { m_isFirst = v; }
@@ -635,7 +636,7 @@ class DocFormula : public DocNode
     QCString text() const       { return m_text; }
     QCString relPath() const    { return m_relPath; }
     int id() const             { return m_id; }
-    void accept(DocVisitor *v) { v->visit(this); }
+    void accept(DocVisitor *v) { printf("%s\n",__PRETTY_FUNCTION__);v->visit(this); }
     bool isInline()            { return m_text.length()>0 ? m_text.at(0)!='\\' : TRUE; }
 
   private:
@@ -656,7 +657,7 @@ class DocIndexEntry : public DocNode
     Definition *scope() const    { return m_scope;  }
     MemberDef *member() const    { return m_member; }
     QCString entry() const        { return m_entry;  }
-    void accept(DocVisitor *v)   { v->visit(this);  }
+    void accept(DocVisitor *v) { printf("%s\n",__PRETTY_FUNCTION__);v->visit(this); }
 
   private:
     QCString     m_entry;
@@ -1129,7 +1130,7 @@ class DocSimpleSectSep : public DocNode
   public:
     DocSimpleSectSep(DocNode *parent) { m_parent = parent; }
     Kind kind() const { return Kind_SimpleSectSep; }
-    void accept(DocVisitor *v) { v->visit(this); }
+    void accept(DocVisitor *v) { printf("%s\n",__PRETTY_FUNCTION__); v->visit(this); }
 
   private:
 };
@@ -1229,6 +1230,7 @@ class DocParamList : public DocNode
     bool isLast() const             { return m_isLast; }
     void accept(DocVisitor *v)
     { 
+        printf("%s\n",__PRETTY_FUNCTION__);
       v->visitPre(this); 
       QListIterator<DocPara> cli(m_paragraphs);
       DocNode *n;
@@ -1259,6 +1261,7 @@ class DocSimpleListItem : public DocNode
     Kind kind() const            { return Kind_SimpleListItem; }
     void accept(DocVisitor *v)
     {
+        printf("%s\n",__PRETTY_FUNCTION__);
       v->visitPre(this); 
       m_paragraph->accept(v);
       v->visitPost(this); 
