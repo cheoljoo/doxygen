@@ -81,8 +81,14 @@ public:
  * @see SRS TIDL-FR-001 Explanation for FR-001
  */
 void ClassA::classAfunc(int t){
+    /**
+     * @brief Condition t==3
+     */
     if(t == 3){
         t=1;
+    /**
+     * @brief Condition else
+     */
     } else 
         t =4;
     return;

@@ -7653,7 +7653,7 @@ DocRoot *validatingParseDoc(const char *fileName,int startLine,
   g_relPath = (!linkFromIndex && ctx) ? 
                QCString(relativePathToRoot(ctx->getOutputFileBase())) : 
                QCString("");
-  printf("%s ctx->name=%s relPath=%s\n",__PRETTY_FUNCTION__,ctx->name().data(),g_relPath.data());
+  printf("validatingParseDoc ctx->name=%s relPath=%s\n",ctx->name().data(),g_relPath.data());
   g_memberDef = md;
   g_nodeStack.clear();
   g_styleStack.clear();
@@ -7672,7 +7672,7 @@ DocRoot *validatingParseDoc(const char *fileName,int startLine,
   g_paramsFound.clear();
   g_sectionDict = 0; //sections;
   
-  printf("%s Starting comment block at %s:%d\n",__PRETTY_FUNCTION__,g_fileName.data(),startLine);
+  printf("validatingParseDoc Starting comment block at %s:%d\n",g_fileName.data(),startLine);
   doctokenizerYYlineno=startLine;
   uint inpLen=qstrlen(input);
   QCString inpStr = processCopyDoc(input,inpLen);
@@ -7680,7 +7680,7 @@ DocRoot *validatingParseDoc(const char *fileName,int startLine,
   {
     inpStr+='\n';
   }
-  printf("%s processCopyDoc(in='%s' out='%s')\n",__PRETTY_FUNCTION__,input,inpStr.data());
+  printf("validatingParseDoc processCopyDoc(in='%s' out='%s')\n",input,inpStr.data());
   doctokenizerYYinit(inpStr,g_fileName);
 
   // build abstract syntax tree
