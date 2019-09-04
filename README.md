@@ -19,7 +19,7 @@
     - git clone doxygen   ( git clone -b  190830/flowKeywordsMakeFileDirectly  https://github.com/cheoljoo/doxygen.git)
     - http://www.doxygen.nl/manual/install.html
       - you can get execute file in doxygen/build/bin
-- how to run & test (a.cpp is similar sample with [examples/flow.cpp](./examples/flow.cpp)  )
+- how to run & test (a.cpp is a similar sample with [examples/flow.cpp](./examples/flow.cpp)  )
   - cd doxygen/test
     - ./doxygen
     - generated result : plantuml.md 
@@ -43,18 +43,18 @@
 
 ### weak point & solution
 - do not give proper result
-	- ```cpp
-    if(condition)
-        if (condition)
-		```
+  - ```cpp
+    for(;;)
+      if (condition)
+    ```
     - this is nested if. but , doxygen code.l does not distinguish it. so I can not generate the right result.
     - solution : you use brace for all if as the following
-    	- ```cpp
-    		if(condition){
-        		if (condition){
-        		}
-    		}
-    		```
+      - ```cpp
+    	  for(;;){
+          if (condition){
+          }
+        }
+        ```
 
 
 # relation between flow statement and plantuml
