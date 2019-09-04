@@ -18,23 +18,9 @@
 - doxygen compile 
     - git clone doxygen   ( git clone -b  190830/flowKeywordsMakeFileDirectly  https://github.com/cheoljoo/doxygen.git)
     - http://www.doxygen.nl/manual/install.html
-- example : 
-    - flow.cpp [examples/flow.cpp](./examples/flow.cpp)
-    - Doxyfile
-		- OUTPUT_TEXT_DIRECTION  = YES
-		- EXTRACT_ALL            = YES
-		- EXTRACT_PRIVATE        = YES
-		- EXTRACT_STATIC         = YES
-		- EXTRACT_LOCAL_METHODS  = YES
-		- RECURSIVE              = YES
-		- GENERATE_TREEVIEW      = YES
-		- GENERATE_PERLMOD       = YES
-		- PERLMOD_LATEX          = YES
-		- TEMPLATE_RELATIONS     = YES
-		- CALL_GRAPH             = YES
-		- CALLER_GRAPH           = YES
-- cd doxygen/build/bin/ 
-    - put flow.cpp and Doxyfile (edited files) in doxygen/build/bin/
+      - you can get execute file in doxygen/build/bin
+- how to run & test (a.cpp is similar sample with [examples/flow.cpp](./examples/flow.cpp)  )
+  - cd doxygen/test
     - ./doxygen
     - generated result : plantuml.md 
 - Try with your code!!!
