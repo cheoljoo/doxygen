@@ -4542,17 +4542,20 @@ DocSimpleSect::~DocSimpleSect()
 
 void DocSimpleSect::accept(DocVisitor *v)
 {
-printf("%s\n",__PRETTY_FUNCTION__);
+printf("%s 22 \n",__PRETTY_FUNCTION__);
   v->visitPre(this);
   if (m_title) m_title->accept(v);
   QListIterator<DocNode> cli(m_children);
   DocNode *n;
+  printf(" 22 1\n");
   for (cli.toFirst();(n=cli.current());++cli) n->accept(v);
+  printf(" 22 2\n");
   v->visitPost(this);
 }
 
 int DocSimpleSect::parse(bool userTitle,bool needsSeparator)
 {
+    printf("%s\n",__PRETTY_FUNCTION__);
   DBG(("DocSimpleSect::parse() start\n"));
   g_nodeStack.push(this);
 
@@ -4697,6 +4700,7 @@ QCString DocSimpleSect::typeString() const
 int DocParamList::parse(const QCString &cmdName)
 {
   int retval=RetVal_OK;
+  printf("%s [%s]\n",__PRETTY_FUNCTION__,qPrint(cmdName));
   DBG(("DocParamList::parse() start\n"));
   g_nodeStack.push(this);
   DocPara *par=0;
