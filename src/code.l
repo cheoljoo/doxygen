@@ -2897,12 +2897,31 @@ printf("<Body SCOPENAME/B2 %s\n",yytext);
 					}
 <Body>{SCOPETNAME}{B}*"<"[^\n\/\-\.\{\"\>]*">"/{BN}*"(" |
 <Body>{SCOPETNAME}/{BN}*"("		{ // a() or c::a() or t<A,B>::a() or A\B\foo()
-printf("<Body SCOPENAME/B3 %s\n",yytext);
+printf("<Body line=%d SCOPENAME/B3 %s\n",g_yyLineNr,yytext);
   					  addType();
 					  generateFunctionLink(*g_code,yytext);
   					  g_bracketCount=0;
 					  g_args.resize(0);
   					  g_name+=yytext; 
+                      {
+                          printf("A\n");
+                          MemberFlowInfo tempMemberFlowInfo;
+                          tempMemberFlowInfo.m_flow = MemberFlowInfo::CallFunction; 
+                          tempMemberFlowInfo.m_hasCondition = TRUE;
+                          tempMemberFlowInfo.m_condition = yytext; 
+                          printf("A1\n");
+                          tempMemberFlowInfo.m_depth = g_bodyCurlyCount;
+                          if(g_currentMemberDef){
+                            FileDef *tfd = g_currentMemberDef->getFileDef();
+                            printf("A2\n");
+                            tempMemberFlowInfo.m_filename = tfd->name();
+                            printf("A3\n");
+                            tempMemberFlowInfo.m_lineNr = g_yyLineNr;
+                            printf("A4\n");
+                            g_currentMemberDef->addFlowInfo(tempMemberFlowInfo);
+                            printf("B\n");
+                          }
+                      }
   					  BEGIN( FuncCall );
 					}
 <FuncCall,Body,MemberCall,MemberCall2,SkipInits,InlineInit>{RAWBEGIN}	{

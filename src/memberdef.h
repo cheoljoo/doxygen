@@ -69,7 +69,8 @@ class MemberFlowInfo
             ForEach       ,
             If            ,
             While         ,
-            ElseIf
+            ElseIf        ,
+            CallFunction            // condition is function name.
         };
 
         MemberFlowInfo() : m_flow(None),m_hasCondition(FALSE),m_condition(""),m_depth(0),m_filename("sample"),m_lineNr(-1){}
