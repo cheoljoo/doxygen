@@ -3204,6 +3204,8 @@ const char* MemberFlowInfo::getFlowString()
             return "while";
         case MemberFlowInfo::ElseIf :
             return "elseif";
+        case MemberFlowInfo::CallFunction :
+            return "functioncall";
         default:
             break;
     };
