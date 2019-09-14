@@ -17,6 +17,8 @@
 #include <qglobal.h>
 #include <qregexp.h>
 #include <assert.h>
+#include <qtextstream.h>
+#include <qlist.h>
 #include "md5.h"
 #include "memberdef.h"
 #include "membername.h"
@@ -5138,6 +5140,200 @@ void MemberDef::addFlowInfo(MemberFlowInfo mfi)
   for (mfil.toFirst();(pmfi=mfil.current());++mfil,++i){
       printf("[%d] flow:%s has:%d depth:%d f:%s l:%d cond:%s\n",i,pmfi->getFlowString(),pmfi->m_hasCondition,pmfi->m_depth,qPrint(pmfi->m_filename),pmfi->m_lineNr,qPrint(pmfi->m_condition));
   }
+}
+
+void MemberDef::writePlantuml()  {
+    static bool g_initOutputFile = FALSE;
+    bool returnFunction = FALSE;
+
+    if(m_flowInfo.count() <= 0){ return ; }
+
+    QFile f("plantuml.md");
+    if(!g_initOutputFile){
+        if (!f.open(IO_WriteOnly)) return;
+    } else {
+        if (!f.open(IO_WriteOnly | IO_Append)) return;
+    }
+    g_initOutputFile = TRUE;
+
+    QTextStream t(&f);
+    t << "```puml :func:" << declaration() << "\n";
+
+    t << "@startuml\n\n";
+    t << "\tstart\n";
+
+    recursiveProcessPlantuml(t,0,MemberFlowInfo::None,-1);
+
+    MemberFlowInfo *cpmfi;
+    for (int i=0;i<m_flowInfo.count();++i){
+        cpmfi = m_flowInfo.at(i);
+        if( (MemberFlowInfo::Return == cpmfi->m_flow) && ( 1 == cpmfi->m_depth) ){
+            returnFunction = TRUE;
+        }
+    }
+    if(!returnFunction){ 
+        t << "\tstop\n";
+    }
+    t << "@enduml\n";
+    t << "```\n\n\n\n\n"; 
+    f.close();
+}
+
+bool isStartFlowKeyword(MemberFlowInfo::FlowKW flow)
+{
+    bool r=FALSE;
+    switch(flow){
+            case MemberFlowInfo::Do            :
+            case MemberFlowInfo::Return        :
+            case MemberFlowInfo::Switch        :
+            case MemberFlowInfo::For           :
+            case MemberFlowInfo::ForEach       :
+            case MemberFlowInfo::If            :
+            case MemberFlowInfo::While         :
+                r = TRUE;
+                break;
+    };
+    return r;
+}
+
+int MemberDef::recursiveProcessPlantuml(QTextStream& t, int startIndex,MemberFlowInfo::FlowKW startFlow,int startDepth){
+    MemberFlowInfo *cpmfi,*npmfi;
+    bool isFirstCase = TRUE;
+    MemberFlowInfo::FlowKW loopStartFlow = MemberFlowInfo::None;
+
+    cpmfi = m_flowInfo.at(startIndex);
+    if( startIndex >= m_flowInfo.count() ){
+        return startIndex-1; 
+    }
+    if(startDepth >= cpmfi->m_depth){   // the same depth or return case (decline the depth)
+        return startIndex-1; 
+    }
+    t << "  ' IN("<< startDepth << ")\n";
+
+    for (int i=startIndex;i<m_flowInfo.count();++i){
+        cpmfi = m_flowInfo.at(i);
+        QCString basicTab;
+        for(int it=0;it<cpmfi->m_depth;it++){ basicTab += "\t"; }
+        QCString incTab(basicTab);
+        incTab += "\t";
+
+        t << basicTab << "' {" << i << "} [ADDFLOW] func:" << declaration() << " ,flow:" << cpmfi->getFlowString() << " ,has:" << cpmfi->m_hasCondition << " ,depth:" << cpmfi->m_depth << " ,file:" << qPrint(cpmfi->m_filename) << " ,line:" << cpmfi->m_lineNr << " ,cond:" << qPrint(cpmfi->m_condition) << "\n";
+
+        switch(cpmfi->m_flow){
+            case MemberFlowInfo::Break         :
+                break;
+            case MemberFlowInfo::Default       :
+                t << basicTab << "else (default)\n";
+                t << incTab << ":default text;\n";
+                i = recursiveProcessPlantuml(t,i+1,cpmfi->m_flow,cpmfi->m_depth);
+                break;
+            case MemberFlowInfo::Do            :
+                t << basicTab << "repeat\n";
+                t << incTab << ":do text;\n";
+                i = recursiveProcessPlantuml(t,i+1,cpmfi->m_flow,cpmfi->m_depth);
+                break;
+            case MemberFlowInfo::Else          :
+                t << basicTab << "else (no)\n";
+                t << incTab << ":else text;\n";
+                i = recursiveProcessPlantuml(t,i+1,cpmfi->m_flow,cpmfi->m_depth);
+                break;
+            case MemberFlowInfo::Return        :
+                t << basicTab << "stop\n";
+                break;
+            case MemberFlowInfo::Switch        :
+                {
+                    // group for each depth
+                    QCString stripSpaceCondition;
+                    {
+                        const char *p;
+                        p = cpmfi->m_condition.data();
+                        int len = strlen(p);
+                        for(int ll=0;ll<len;ll++,p++){
+                            if(*p != ' '){
+                                stripSpaceCondition += *p;
+                            }
+                            //t << *p << ":" << stripSpaceCondition << "\n";
+                        }
+                        //t << substitute(cpmfi->m_condition.stripWhiteSpace()," ","_") << "\n";
+                    }
+                    t << basicTab << "partition switch" << stripSpaceCondition << "{\n";
+                    i = recursiveProcessPlantuml(t,i+1,cpmfi->m_flow,cpmfi->m_depth);
+                    t << incTab << "endif\n";
+                    t << basicTab << "}\n";
+                    isFirstCase = TRUE;
+                }
+                break;
+            case MemberFlowInfo::Case          :
+                // first case -> if  for each depth
+                if(isFirstCase){
+                    t << basicTab << "if (" << cpmfi->m_condition << ") then (yes)\n";
+                    t << incTab << ":case text;\n";
+                    isFirstCase = FALSE;
+                } else { // other case -> elseif for each depth
+                    t << basicTab << "elseif (" << cpmfi->m_condition << ") then (yes)\n";
+                    t << incTab << ":case text;\n";
+                }
+                i = recursiveProcessPlantuml(t,i+1,cpmfi->m_flow,cpmfi->m_depth);
+                break;
+            case MemberFlowInfo::For           :
+                t << basicTab << "while " << cpmfi->m_condition << "\n";
+                t << incTab << ":for text;\n";
+                i = recursiveProcessPlantuml(t,i+1,cpmfi->m_flow,cpmfi->m_depth);
+                t << basicTab << "endwhile\n";
+                break;
+            case MemberFlowInfo::ForEach       :
+                t << basicTab << "while " << cpmfi->m_condition << "\n";
+                t << incTab << ":foreach text;\n";
+                i = recursiveProcessPlantuml(t,i+1,cpmfi->m_flow,cpmfi->m_depth);
+                t << basicTab << "endwhile\n";
+                break;
+            case MemberFlowInfo::If            :
+                t << basicTab << "if " << cpmfi->m_condition << " then (yes)\n";
+                t << incTab << ":if text;\n";
+                i = recursiveProcessPlantuml(t,i+1,cpmfi->m_flow,cpmfi->m_depth);
+                break;
+            case MemberFlowInfo::While         :
+                if(loopStartFlow == MemberFlowInfo::Do){
+                    t << basicTab << "repeat while " << cpmfi->m_condition << " is (yes)\n";
+                    t << basicTab << "->no;\n";
+                } else {
+                    t << basicTab << "while " << cpmfi->m_condition << "\n";
+                    t << incTab << ":while text;\n";
+                    i = recursiveProcessPlantuml(t,i+1,cpmfi->m_flow,cpmfi->m_depth);
+                    t << basicTab << "endwhile\n";
+                }
+                break;
+            case MemberFlowInfo::ElseIf        :
+                t << basicTab << "elseif " << cpmfi->m_condition << " then (yes)\n";
+                t << incTab << ":elseif text;\n";
+                i = recursiveProcessPlantuml(t,i+1,cpmfi->m_flow,cpmfi->m_depth);
+                break;
+        };
+
+        if(isStartFlowKeyword(cpmfi->m_flow)){ loopStartFlow =cpmfi->m_flow; }
+
+        // Just for if statement : "if" need "endif" at the end.
+        if( (i+1) < m_flowInfo.count() ){       // in case of next keyword is starting flow keyword (if , do , while .. etc..)
+            npmfi = m_flowInfo.at(i+1);
+            if(npmfi->m_depth < cpmfi->m_depth){ // this is end of recursive part.
+                if(MemberFlowInfo::If == loopStartFlow){
+                    t << basicTab << "endif\n";
+                }
+                t << "  ' OUT("<< startDepth << "|" << i << ")\n";
+                return i;
+            }
+            if(isStartFlowKeyword(npmfi->m_flow) && (MemberFlowInfo::If == loopStartFlow) ){
+               t << basicTab << "endif\n";
+            }
+        } else {        // in case of the end 
+            if(MemberFlowInfo::If == loopStartFlow){
+                    t << basicTab << "endif\n";
+            }
+            t << "  ' OUT("<< startDepth << ":" << i << ")\n";
+            return 4096;
+        }
+    }
+    t << "  ' OUT("<< startDepth << ")\n";
 }
 
 void MemberDef::addFlowKeyWord()

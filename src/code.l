@@ -2134,6 +2134,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					  if (--g_bodyCurlyCount<=0)
 					  {
 					    g_insideBody=FALSE;
+                        if(g_currentMemberDef){ g_currentMemberDef->writePlantuml(); }
 					    g_currentMemberDef=0;
 					    if (g_currentDefinition) 
 					      g_currentDefinition=g_currentDefinition->getOuterScope();
