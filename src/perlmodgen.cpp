@@ -555,6 +555,14 @@ void PerlModDocVisitor::visit(DocWord *w)
 void PerlModDocVisitor::visit(DocLinkedWord *w)
 {
 ;;printf("%s DocLinkedWord [anchor:%s][word:%s]\n",__PRETTY_FUNCTION__,qPrint(w->anchor()),qPrint(w->word()));
+;;printf("%s DocLinkedWord [file:%s][relPath:%s][ref:%s][tooltip:%s]\n",__PRETTY_FUNCTION__,qPrint(w->file()),qPrint(w->relPath()),qPrint(w->ref()), qPrint(w->tooltip()));
+/*
+;;if(w->parent()){
+    DocLinkedWord *wt;
+    wt = w->parent();
+    ;;printf("%s DocLinkedWord [parent word :%s]\n",__PRETTY_FUNCTION__,qPrint(wt->word()));
+}
+*/
   openItem("url");
   addLink(w->ref(), w->file(), w->anchor());
   m_output.addFieldQuotedString("content", w->word());

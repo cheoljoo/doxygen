@@ -2,6 +2,9 @@
 #include <string>
 using namespace std;
 
+void last();
+
+/* start of Enclosing class declaration */
 class Enclosing {
    private:
        int x;
@@ -30,8 +33,12 @@ public:
     int a ;
     int b ;
     DerivedA(int a=0,int b=0){}
+    void derivedB(){}
 };
 
+/**
+ * @brief  derivedB()   DerivedA::derivedB()  ClassA::derivedB()
+ */
 class ClassA : public DerivedA {
 private:
     int c ;
@@ -42,7 +49,7 @@ public:
         If,
         Else,
     };
-    ClassA(int aa=0,int bb=0):c(aa),d(bb) {} 
+    ClassA(int aa=0,int bb=0):c(aa),d(bb) { derivedB(); } 
     void classAfunc(int t);
 };
 
@@ -65,7 +72,6 @@ public:
  *     participant ServiceStub
  *     end box
  *
- *     == desc this funciton will be invoked when application or another services call this function through binder. 
  *     App -> BpV2XAntennaManagerService : wishtoUseAPI_1(arguments)
  *     BpV2XAntennaManagerService -> Binder : V2XAntennaData >> remote()->onTransact(OP_REGISTER_WISHTOUSEAPI_1, Parcel)
  *     Binder -> BnV2XAntennaManagerService : onTransact(uint32_t code, const Parcel& data,reply)\n OP_REGISTER_WISHTOUSEAPI_1, Parcel >> arguments
@@ -80,7 +86,8 @@ public:
  *
  * @see SRS TIDL-FR-001 Explanation for FR-001
  */
-void ClassA::classAfunc(int t){
+void ClassA::classAfunc(int t)
+{
     /**
      * @brief Condition t==3
      */
@@ -113,6 +120,7 @@ int example(int& aa,int &bb)
 	}
 	else {
 		aa = -bb;
+        ClassA::classAfunc(aa);
 	}
 
 	return aa;
@@ -122,6 +130,7 @@ int main()
 {
     ClassA p(0,0);
 
+    p.classAfunc(3);
    	int number;
     cout << "Enter an integer: ";
     cin >> number;
@@ -196,6 +205,7 @@ int main()
 	   if ( (animal == "Ash Borer")
 			   || (animal == "dog") ){
 		   branch = "Right";
+           last();
 	   } else {
 		   branch = "Undefined";
 	   }
@@ -206,6 +216,7 @@ int main()
    do {
        a++;
 	   branch = "fined";
+       last();
     } while(0);
 
     switch(a + 4){
@@ -239,6 +250,9 @@ int main()
   return 0;
 }
 
+/**
+ *  @brief  TT ClassA::classAfunc(aa) TT ClassA::classAfunc()  classAfunc
+ */
 void last()
 {
     int aa =1 , bb = 3;

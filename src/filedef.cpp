@@ -564,7 +564,7 @@ void FileDef::writeIncludedByGraph(OutputList &ol)
 
 void FileDef::writeSourceLink(OutputList &ol)
 {
-  //printf("%s: generateSourceFile()=%d\n",name().data(),generateSourceFile());
+  printf("%s: generateSourceFile()=%d\n",name().data(),generateSourceFile());
   if (generateSourceFile())
   {
     ol.disableAllBut(OutputGenerator::Html);

@@ -544,7 +544,7 @@ void HtmlCodeGenerator::writeCodeLink(const char *ref,const char *f,
                                       const char *tooltip)
 {
   if (!m_streamSet) return;
-  //printf("writeCodeLink(ref=%s,f=%s,anchor=%s,name=%s,tooltip=%s)\n",ref,f,anchor,name,tooltip);
+  printf("%s writeCodeLink(ref=%s,f=%s,anchor=%s,name=%s,tooltip=%s)\n",__PRETTY_FUNCTION__,ref,f,anchor,name,tooltip);
   _writeCodeLink("code",ref,f,anchor,name,tooltip);
 }
 
