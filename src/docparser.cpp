@@ -3859,6 +3859,7 @@ void DocHtmlTable::computeTableGrid()
 
 void DocHtmlTable::accept(DocVisitor *v) 
 { 
+printf("%s\n",__PRETTY_FUNCTION__);
   v->visitPre(this); 
   // for HTML output we put the caption first
   //if (m_caption && v->id()==DocVisitor_Html) m_caption->accept(v);
@@ -4541,16 +4542,20 @@ DocSimpleSect::~DocSimpleSect()
 
 void DocSimpleSect::accept(DocVisitor *v)
 {
+printf("%s 22 \n",__PRETTY_FUNCTION__);
   v->visitPre(this);
   if (m_title) m_title->accept(v);
   QListIterator<DocNode> cli(m_children);
   DocNode *n;
+  printf(" 22 1\n");
   for (cli.toFirst();(n=cli.current());++cli) n->accept(v);
+  printf(" 22 2\n");
   v->visitPost(this);
 }
 
 int DocSimpleSect::parse(bool userTitle,bool needsSeparator)
 {
+    printf("%s\n",__PRETTY_FUNCTION__);
   DBG(("DocSimpleSect::parse() start\n"));
   g_nodeStack.push(this);
 
@@ -4695,6 +4700,7 @@ QCString DocSimpleSect::typeString() const
 int DocParamList::parse(const QCString &cmdName)
 {
   int retval=RetVal_OK;
+  printf("%s [%s]\n",__PRETTY_FUNCTION__,qPrint(cmdName));
   DBG(("DocParamList::parse() start\n"));
   g_nodeStack.push(this);
   DocPara *par=0;
@@ -7515,11 +7521,11 @@ DocRoot *validatingParseDoc(const char *fileName,int startLine,
                             bool isExample, const char *exampleName,
                             bool singleLine, bool linkFromIndex)
 {
-  //printf("validatingParseDoc(%s,%s)=[%s]\n",ctx?ctx->name().data():"<none>",
-  //                                     md?md->name().data():"<none>",
-  //                                     input);
-  //printf("========== validating %s at line %d\n",fileName,startLine);
-  //printf("---------------- input --------------------\n%s\n----------- end input -------------------\n",input);
+  printf("validatingParseDoc(%s,%s)=[%s]\n",ctx?ctx->name().data():"<none>",
+                                       md?md->name().data():"<none>",
+                                       input);
+  printf("========== validating %s at line %d\n",fileName,startLine);
+  printf("---------------- input --------------------\n%s\n----------- end input -------------------\n",input);
   //g_token = new TokenInfo;
 
   // store parser state so we can re-enter this function if needed
@@ -7651,7 +7657,7 @@ DocRoot *validatingParseDoc(const char *fileName,int startLine,
   g_relPath = (!linkFromIndex && ctx) ? 
                QCString(relativePathToRoot(ctx->getOutputFileBase())) : 
                QCString("");
-  //printf("ctx->name=%s relPath=%s\n",ctx->name().data(),g_relPath.data());
+  printf("validatingParseDoc ctx->name=%s relPath=%s\n",ctx->name().data(),g_relPath.data());
   g_memberDef = md;
   g_nodeStack.clear();
   g_styleStack.clear();
@@ -7670,7 +7676,7 @@ DocRoot *validatingParseDoc(const char *fileName,int startLine,
   g_paramsFound.clear();
   g_sectionDict = 0; //sections;
   
-  //printf("Starting comment block at %s:%d\n",g_fileName.data(),startLine);
+  printf("validatingParseDoc Starting comment block at %s:%d\n",g_fileName.data(),startLine);
   doctokenizerYYlineno=startLine;
   uint inpLen=qstrlen(input);
   QCString inpStr = processCopyDoc(input,inpLen);
@@ -7678,7 +7684,7 @@ DocRoot *validatingParseDoc(const char *fileName,int startLine,
   {
     inpStr+='\n';
   }
-  //printf("processCopyDoc(in='%s' out='%s')\n",input,inpStr.data());
+  printf("validatingParseDoc processCopyDoc(in='%s' out='%s')\n",input,inpStr.data());
   doctokenizerYYinit(inpStr,g_fileName);
 
   // build abstract syntax tree
@@ -7705,8 +7711,8 @@ DocRoot *validatingParseDoc(const char *fileName,int startLine,
   // restore original parser state
   docParserPopContext();
 
-  //printf(">>>>>> end validatingParseDoc(%s,%s)\n",ctx?ctx->name().data():"<none>",
-  //                                     md?md->name().data():"<none>");
+  printf(">>>>>> end validatingParseDoc(%s,%s)\n",ctx?ctx->name().data():"<none>",
+                                       md?md->name().data():"<none>");
   
   return root;
 }
