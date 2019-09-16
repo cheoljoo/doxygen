@@ -5114,17 +5114,6 @@ void MemberDef::invalidateCachedArgumentTypes()
   invalidateCachedTypesInArgumentList(m_impl->declArgList);
 }
 
-/*
-void MemberDef::addFlowInfo(MemberFlowInfo::FlowKW flow,QCString condition,int depth,const char* filename,int line)
-{
-  MemberFlowInfo mfi(flow,condition,depth,filename,line);
-  printf("[ADDFLOW] func:%s flow:%s has:%d depth:%d f:%s l:%d cond:%s\n",declaration(),mfi.getFlowString(),mfi.m_hasCondition,mfi.m_depth,qPrint(mfi.m_filename),mfi.m_lineNr,qPrint(mfi.m_condition));
-  //mfi.setFlow(flowString);
-  m_flowInfo.append(&mfi);
-  //m_flowInfo.insert(index,&mfi);
-}
-*/
-
 void MemberDef::addFlowInfo(MemberFlowInfo mfi)
 {
   MemberFlowInfo* cpmfi = new MemberFlowInfo(mfi);
@@ -5142,11 +5131,12 @@ void MemberDef::addFlowInfo(MemberFlowInfo mfi)
   }
 }
 
-void MemberDef::writePlantuml()  {
+void MemberDef::writePlantuml()
+{
     static bool g_initOutputFile = FALSE;
     bool returnFunction = FALSE;
 
-    if(m_flowInfo.count() <= 0){ return ; }
+    if(m_flowInfo.count() <= 1){ return ; }
 
     QFile f("plantuml.md");
     if(!g_initOutputFile){
@@ -5157,12 +5147,14 @@ void MemberDef::writePlantuml()  {
     g_initOutputFile = TRUE;
 
     QTextStream t(&f);
-    t << "```puml :func:" << declaration() << "\n";
+    t << "```puml :func-FlowChart:" << declaration() << "\n";
 
     t << "@startuml\n\n";
+    m_flowChartPlantuml += "@startuml\n\n";
     t << "\tstart\n";
+    m_flowChartPlantuml += "\tstart\n";
 
-    recursiveProcessPlantuml(t,0,MemberFlowInfo::None,-1);
+    recursiveFlowChartPlantuml(t,0,MemberFlowInfo::None,-1);
 
     MemberFlowInfo *cpmfi;
     for (int i=0;i<m_flowInfo.count();++i){
@@ -5173,9 +5165,29 @@ void MemberDef::writePlantuml()  {
     }
     if(!returnFunction){ 
         t << "\tstop\n";
+        m_flowChartPlantuml += "\tstop\n";
     }
     t << "@enduml\n";
+    m_flowChartPlantuml += "@enduml\n";
     t << "```\n\n\n\n\n"; 
+
+
+
+    returnFunction = FALSE;
+    t << "```puml :func-SequenceDiagram:" << declaration() << "\n";
+
+    t << "@startuml\n\n";
+    m_sequenceDiagramPlantuml += "@startuml\n\n";
+    if(getClassDef()){
+        t << "participant " << getClassDef()->name() << " as CA\n";
+    }
+
+    recursiveSequenceDiagramPlantuml(t,0,MemberFlowInfo::None,-1);
+
+    t << "@enduml\n";
+    m_sequenceDiagramPlantuml += "@enduml\n";
+    t << "```\n\n\n\n\n"; 
+
     f.close();
 }
 
@@ -5193,11 +5205,15 @@ bool isStartFlowKeyword(MemberFlowInfo::FlowKW flow)
             case MemberFlowInfo::CallFunction  :
                 r = TRUE;
                 break;
+            default:
+                r = FALSE;
+                break;
     };
     return r;
 }
 
-int MemberDef::recursiveProcessPlantuml(QTextStream& t, int startIndex,MemberFlowInfo::FlowKW startFlow,int startDepth){
+int MemberDef::recursiveFlowChartPlantuml(QTextStream& t, int startIndex,MemberFlowInfo::FlowKW startFlow,int startDepth)
+{
     MemberFlowInfo *cpmfi,*npmfi;
     bool isFirstCase = TRUE;
     MemberFlowInfo::FlowKW loopStartFlow = MemberFlowInfo::None;
@@ -5225,21 +5241,28 @@ int MemberDef::recursiveProcessPlantuml(QTextStream& t, int startIndex,MemberFlo
                 break;
             case MemberFlowInfo::Default       :
                 t << basicTab << "else (default)\n";
+                m_flowChartPlantuml += basicTab + "else (default)\n";
                 t << incTab << ":default text;\n";
-                i = recursiveProcessPlantuml(t,i+1,cpmfi->m_flow,cpmfi->m_depth);
+                m_flowChartPlantuml += incTab + ":default text;\n";
+                i = recursiveFlowChartPlantuml(t,i+1,cpmfi->m_flow,cpmfi->m_depth);
                 break;
             case MemberFlowInfo::Do            :
                 t << basicTab << "repeat\n";
+                m_flowChartPlantuml += basicTab + "repeat\n";
                 t << incTab << ":do text;\n";
-                i = recursiveProcessPlantuml(t,i+1,cpmfi->m_flow,cpmfi->m_depth);
+                m_flowChartPlantuml += incTab + ":do text;\n";
+                i = recursiveFlowChartPlantuml(t,i+1,cpmfi->m_flow,cpmfi->m_depth);
                 break;
             case MemberFlowInfo::Else          :
                 t << basicTab << "else (no)\n";
+                m_flowChartPlantuml += basicTab + "else (no)\n";
                 t << incTab << ":else text;\n";
-                i = recursiveProcessPlantuml(t,i+1,cpmfi->m_flow,cpmfi->m_depth);
+                m_flowChartPlantuml += incTab + ":else text;\n";
+                i = recursiveFlowChartPlantuml(t,i+1,cpmfi->m_flow,cpmfi->m_depth);
                 break;
             case MemberFlowInfo::Return        :
                 t << basicTab << "stop\n";
+                m_flowChartPlantuml += basicTab + "stop\n";
                 break;
             case MemberFlowInfo::Switch        :
                 {
@@ -5258,9 +5281,12 @@ int MemberDef::recursiveProcessPlantuml(QTextStream& t, int startIndex,MemberFlo
                         //t << substitute(cpmfi->m_condition.stripWhiteSpace()," ","_") << "\n";
                     }
                     t << basicTab << "partition switch" << stripSpaceCondition << "{\n";
-                    i = recursiveProcessPlantuml(t,i+1,cpmfi->m_flow,cpmfi->m_depth);
+                    m_flowChartPlantuml += basicTab + "partition switch" + stripSpaceCondition + "{\n";
+                    i = recursiveFlowChartPlantuml(t,i+1,cpmfi->m_flow,cpmfi->m_depth);
                     t << incTab << "endif\n";
+                    m_flowChartPlantuml += incTab + "endif\n";
                     t << basicTab << "}\n";
+                    m_flowChartPlantuml += basicTab + "}\n";
                     isFirstCase = TRUE;
                 }
                 break;
@@ -5268,49 +5294,71 @@ int MemberDef::recursiveProcessPlantuml(QTextStream& t, int startIndex,MemberFlo
                 // first case -> if  for each depth
                 if(isFirstCase){
                     t << basicTab << "if (" << cpmfi->m_condition << ") then (yes)\n";
+                    m_flowChartPlantuml += basicTab + "if (" + cpmfi->m_condition + ") then (yes)\n";
                     t << incTab << ":case text;\n";
+                    m_flowChartPlantuml += incTab + ":case text;\n";
                     isFirstCase = FALSE;
                 } else { // other case -> elseif for each depth
                     t << basicTab << "elseif (" << cpmfi->m_condition << ") then (yes)\n";
+                    m_flowChartPlantuml += basicTab + "elseif (" + cpmfi->m_condition + ") then (yes)\n";
                     t << incTab << ":case text;\n";
+                    m_flowChartPlantuml += incTab + ":case text;\n";
                 }
-                i = recursiveProcessPlantuml(t,i+1,cpmfi->m_flow,cpmfi->m_depth);
+                i = recursiveFlowChartPlantuml(t,i+1,cpmfi->m_flow,cpmfi->m_depth);
                 break;
             case MemberFlowInfo::For           :
                 t << basicTab << "while " << cpmfi->m_condition << "\n";
+                m_flowChartPlantuml += basicTab + "while " + cpmfi->m_condition + "\n";
                 t << incTab << ":for text;\n";
-                i = recursiveProcessPlantuml(t,i+1,cpmfi->m_flow,cpmfi->m_depth);
+                m_flowChartPlantuml += incTab + ":for text;\n";
+                i = recursiveFlowChartPlantuml(t,i+1,cpmfi->m_flow,cpmfi->m_depth);
                 t << basicTab << "endwhile\n";
+                m_flowChartPlantuml += basicTab + "endwhile\n";
                 break;
             case MemberFlowInfo::ForEach       :
                 t << basicTab << "while " << cpmfi->m_condition << "\n";
+                m_flowChartPlantuml += basicTab + "while " + cpmfi->m_condition + "\n";
                 t << incTab << ":foreach text;\n";
-                i = recursiveProcessPlantuml(t,i+1,cpmfi->m_flow,cpmfi->m_depth);
+                m_flowChartPlantuml += incTab + ":foreach text;\n";
+                i = recursiveFlowChartPlantuml(t,i+1,cpmfi->m_flow,cpmfi->m_depth);
                 t << basicTab << "endwhile\n";
+                m_flowChartPlantuml += basicTab + "endwhile\n";
                 break;
             case MemberFlowInfo::If            :
                 t << basicTab << "if " << cpmfi->m_condition << " then (yes)\n";
+                m_flowChartPlantuml += basicTab + "if " + cpmfi->m_condition + " then (yes)\n";
                 t << incTab << ":if text;\n";
-                i = recursiveProcessPlantuml(t,i+1,cpmfi->m_flow,cpmfi->m_depth);
+                m_flowChartPlantuml += incTab + ":if text;\n";
+                i = recursiveFlowChartPlantuml(t,i+1,cpmfi->m_flow,cpmfi->m_depth);
                 break;
             case MemberFlowInfo::While         :
                 if(loopStartFlow == MemberFlowInfo::Do){
                     t << basicTab << "repeat while " << cpmfi->m_condition << " is (yes)\n";
+                    m_flowChartPlantuml += basicTab + "repeat while " + cpmfi->m_condition + " is (yes)\n";
                     t << basicTab << "->no;\n";
+                    m_flowChartPlantuml += basicTab + "->no;\n";
                 } else {
                     t << basicTab << "while " << cpmfi->m_condition << "\n";
+                    m_flowChartPlantuml += basicTab + "while " + cpmfi->m_condition + "\n";
                     t << incTab << ":while text;\n";
-                    i = recursiveProcessPlantuml(t,i+1,cpmfi->m_flow,cpmfi->m_depth);
+                    m_flowChartPlantuml += incTab + ":while text;\n";
+                    i = recursiveFlowChartPlantuml(t,i+1,cpmfi->m_flow,cpmfi->m_depth);
                     t << basicTab << "endwhile\n";
+                    m_flowChartPlantuml += basicTab + "endwhile\n";
                 }
                 break;
             case MemberFlowInfo::ElseIf        :
                 t << basicTab << "elseif " << cpmfi->m_condition << " then (yes)\n";
+                m_flowChartPlantuml += basicTab + "elseif " + cpmfi->m_condition + " then (yes)\n";
                 t << incTab << ":elseif text;\n";
-                i = recursiveProcessPlantuml(t,i+1,cpmfi->m_flow,cpmfi->m_depth);
+                m_flowChartPlantuml += incTab + ":elseif text;\n";
+                i = recursiveFlowChartPlantuml(t,i+1,cpmfi->m_flow,cpmfi->m_depth);
                 break;
             case MemberFlowInfo::CallFunction  :
                 t << basicTab << ":" << cpmfi->m_condition << ";\n";
+                m_flowChartPlantuml += basicTab + ":" + cpmfi->m_condition + ";\n";
+                break;
+            default:
                 break;
         };
 
@@ -5322,22 +5370,206 @@ int MemberDef::recursiveProcessPlantuml(QTextStream& t, int startIndex,MemberFlo
             if(npmfi->m_depth < cpmfi->m_depth){ // this is end of recursive part.
                 if(MemberFlowInfo::If == loopStartFlow){
                     t << basicTab << "endif\n";
+                    m_flowChartPlantuml += basicTab + "endif\n";
                 }
                 t << "  ' OUT(depth:"<< startDepth << "<index:" << i << ")\n";
                 return i;
             }
             if(isStartFlowKeyword(npmfi->m_flow) && (MemberFlowInfo::If == loopStartFlow) ){
                t << basicTab << "endif\n";
+               m_flowChartPlantuml += basicTab + "endif\n";
             }
         } else {        // in case of the end 
             if(MemberFlowInfo::If == loopStartFlow){
                     t << basicTab << "endif\n";
+                    m_flowChartPlantuml += basicTab + "endif\n";
             }
             t << "  ' OUT(depth:"<< startDepth << ":index:" << i << ")\n";
-            return 4096;
+            return -1;
         }
     }
     t << "  ' OUT("<< startDepth << ")\n";
+    return -1;
+}
+
+int MemberDef::recursiveSequenceDiagramPlantuml(QTextStream& t, int startIndex,MemberFlowInfo::FlowKW startFlow,int startDepth)
+{
+    MemberFlowInfo *cpmfi,*npmfi;
+    bool isFirstCase = TRUE;
+    MemberFlowInfo::FlowKW loopStartFlow = MemberFlowInfo::None;
+
+    cpmfi = m_flowInfo.at(startIndex);
+    if( startIndex >= m_flowInfo.count() ){
+        return startIndex-1; 
+    }
+    if(startDepth >= cpmfi->m_depth){   // the same depth or return case (decline the depth)
+        return startIndex-1; 
+    }
+    t << "  ' IN(depth:"<< startDepth << ",index:" << startIndex << ")\n";
+
+    for (int i=startIndex;i<m_flowInfo.count();++i){
+        cpmfi = m_flowInfo.at(i);
+        QCString basicTab;
+        for(int it=0;it<cpmfi->m_depth;it++){ basicTab += "\t"; }
+        QCString incTab(basicTab);
+        incTab += "\t";
+
+        t << basicTab << "' {" << i << "} [ADDFLOW] func:" << declaration() << " ,flow:" << cpmfi->getFlowString() << " ,loopflow:" << loopStartFlow << " ,has:" << cpmfi->m_hasCondition << " ,depth:" << cpmfi->m_depth << " ,file:" << qPrint(cpmfi->m_filename) << " ,line:" << cpmfi->m_lineNr << " ,cond:" << qPrint(cpmfi->m_condition) << "\n";
+
+        switch(cpmfi->m_flow){
+            case MemberFlowInfo::Break         :
+                break;
+            case MemberFlowInfo::Default       :
+                t << basicTab << "else (default)\n";
+                m_sequenceDiagramPlantuml += basicTab + "else (default)\n";
+                t << incTab << ":default text;\n";
+                m_sequenceDiagramPlantuml += incTab + ":default text;\n";
+                i = recursiveSequenceDiagramPlantuml(t,i+1,cpmfi->m_flow,cpmfi->m_depth);
+                break;
+            case MemberFlowInfo::Do            :
+                t << basicTab << "repeat\n";
+                m_sequenceDiagramPlantuml += basicTab + "repeat\n";
+                t << incTab << ":do text;\n";
+                m_sequenceDiagramPlantuml += incTab + ":do text;\n";
+                i = recursiveSequenceDiagramPlantuml(t,i+1,cpmfi->m_flow,cpmfi->m_depth);
+                break;
+            case MemberFlowInfo::Else          :
+                t << basicTab << "else (no)\n";
+                m_sequenceDiagramPlantuml += basicTab + "else (no)\n";
+                t << incTab << ":else text;\n";
+                m_sequenceDiagramPlantuml += incTab + ":else text;\n";
+                i = recursiveSequenceDiagramPlantuml(t,i+1,cpmfi->m_flow,cpmfi->m_depth);
+                break;
+            case MemberFlowInfo::Return        :
+                t << basicTab << "stop\n";
+                m_sequenceDiagramPlantuml += basicTab + "stop\n";
+                break;
+            case MemberFlowInfo::Switch        :
+                {
+                    // group for each depth
+                    QCString stripSpaceCondition;
+                    {
+                        const char *p;
+                        p = cpmfi->m_condition.data();
+                        int len = strlen(p);
+                        for(int ll=0;ll<len;ll++,p++){
+                            if(*p != ' '){
+                                stripSpaceCondition += *p;
+                            }
+                            //t << *p << ":" << stripSpaceCondition << "\n";
+                        }
+                        //t << substitute(cpmfi->m_condition.stripWhiteSpace()," ","_") << "\n";
+                    }
+                    t << basicTab << "partition switch" << stripSpaceCondition << "{\n";
+                    m_sequenceDiagramPlantuml += basicTab + "partition switch" + stripSpaceCondition + "{\n";
+                    i = recursiveSequenceDiagramPlantuml(t,i+1,cpmfi->m_flow,cpmfi->m_depth);
+                    t << incTab << "endif\n";
+                    m_sequenceDiagramPlantuml += incTab + "endif\n";
+                    t << basicTab << "}\n";
+                    m_sequenceDiagramPlantuml += basicTab + "}\n";
+                    isFirstCase = TRUE;
+                }
+                break;
+            case MemberFlowInfo::Case          :
+                // first case -> if  for each depth
+                if(isFirstCase){
+                    t << basicTab << "if (" << cpmfi->m_condition << ") then (yes)\n";
+                    m_sequenceDiagramPlantuml += basicTab + "if (" + cpmfi->m_condition + ") then (yes)\n";
+                    t << incTab << ":case text;\n";
+                    m_sequenceDiagramPlantuml += incTab + ":case text;\n";
+                    isFirstCase = FALSE;
+                } else { // other case -> elseif for each depth
+                    t << basicTab << "elseif (" << cpmfi->m_condition << ") then (yes)\n";
+                    m_sequenceDiagramPlantuml += basicTab + "elseif (" + cpmfi->m_condition + ") then (yes)\n";
+                    t << incTab << ":case text;\n";
+                    m_sequenceDiagramPlantuml += incTab + ":case text;\n";
+                }
+                i = recursiveSequenceDiagramPlantuml(t,i+1,cpmfi->m_flow,cpmfi->m_depth);
+                break;
+            case MemberFlowInfo::For           :
+                t << basicTab << "while " << cpmfi->m_condition << "\n";
+                m_sequenceDiagramPlantuml += basicTab + "while " + cpmfi->m_condition + "\n";
+                t << incTab << ":for text;\n";
+                m_sequenceDiagramPlantuml += incTab + ":for text;\n";
+                i = recursiveSequenceDiagramPlantuml(t,i+1,cpmfi->m_flow,cpmfi->m_depth);
+                t << basicTab << "endwhile\n";
+                m_sequenceDiagramPlantuml += basicTab + "endwhile\n";
+                break;
+            case MemberFlowInfo::ForEach       :
+                t << basicTab << "while " << cpmfi->m_condition << "\n";
+                m_sequenceDiagramPlantuml += basicTab + "while " + cpmfi->m_condition + "\n";
+                t << incTab << ":foreach text;\n";
+                m_sequenceDiagramPlantuml += incTab + ":foreach text;\n";
+                i = recursiveSequenceDiagramPlantuml(t,i+1,cpmfi->m_flow,cpmfi->m_depth);
+                t << basicTab << "endwhile\n";
+                m_sequenceDiagramPlantuml += basicTab + "endwhile\n";
+                break;
+            case MemberFlowInfo::If            :
+                t << basicTab << "if " << cpmfi->m_condition << " then (yes)\n";
+                m_sequenceDiagramPlantuml += basicTab + "if " + cpmfi->m_condition + " then (yes)\n";
+                t << incTab << ":if text;\n";
+                m_sequenceDiagramPlantuml += incTab + ":if text;\n";
+                i = recursiveSequenceDiagramPlantuml(t,i+1,cpmfi->m_flow,cpmfi->m_depth);
+                break;
+            case MemberFlowInfo::While         :
+                if(loopStartFlow == MemberFlowInfo::Do){
+                    t << basicTab << "repeat while " << cpmfi->m_condition << " is (yes)\n";
+                    m_sequenceDiagramPlantuml += basicTab + "repeat while " + cpmfi->m_condition + " is (yes)\n";
+                    t << basicTab << "->no;\n";
+                    m_sequenceDiagramPlantuml += basicTab + "->no;\n";
+                } else {
+                    t << basicTab << "while " << cpmfi->m_condition << "\n";
+                    m_sequenceDiagramPlantuml += basicTab + "while " + cpmfi->m_condition + "\n";
+                    t << incTab << ":while text;\n";
+                    m_sequenceDiagramPlantuml += incTab + ":while text;\n";
+                    i = recursiveSequenceDiagramPlantuml(t,i+1,cpmfi->m_flow,cpmfi->m_depth);
+                    t << basicTab << "endwhile\n";
+                    m_sequenceDiagramPlantuml += basicTab + "endwhile\n";
+                }
+                break;
+            case MemberFlowInfo::ElseIf        :
+                t << basicTab << "elseif " << cpmfi->m_condition << " then (yes)\n";
+                m_sequenceDiagramPlantuml += basicTab + "elseif " + cpmfi->m_condition + " then (yes)\n";
+                t << incTab << ":elseif text;\n";
+                m_sequenceDiagramPlantuml += incTab + ":elseif text;\n";
+                i = recursiveSequenceDiagramPlantuml(t,i+1,cpmfi->m_flow,cpmfi->m_depth);
+                break;
+            case MemberFlowInfo::CallFunction  :
+                t << basicTab << ":" << cpmfi->m_condition << ";\n";
+                m_sequenceDiagramPlantuml += basicTab + ":" + cpmfi->m_condition + ";\n";
+                break;
+            default:
+                break;
+        };
+
+        if(isStartFlowKeyword(cpmfi->m_flow)){ loopStartFlow =cpmfi->m_flow; }
+
+        // Just for if statement : "if" need "endif" at the end.
+        if( (i+1) < m_flowInfo.count() ){       // in case of next keyword is starting flow keyword (if , do , while .. etc..)
+            npmfi = m_flowInfo.at(i+1);
+            if(npmfi->m_depth < cpmfi->m_depth){ // this is end of recursive part.
+                if(MemberFlowInfo::If == loopStartFlow){
+                    t << basicTab << "endif\n";
+                    m_sequenceDiagramPlantuml += basicTab + "endif\n";
+                }
+                t << "  ' OUT(depth:"<< startDepth << "<index:" << i << ")\n";
+                return i;
+            }
+            if(isStartFlowKeyword(npmfi->m_flow) && (MemberFlowInfo::If == loopStartFlow) ){
+               t << basicTab << "endif\n";
+               m_sequenceDiagramPlantuml += basicTab + "endif\n";
+            }
+        } else {        // in case of the end 
+            if(MemberFlowInfo::If == loopStartFlow){
+                    t << basicTab << "endif\n";
+                    m_sequenceDiagramPlantuml += basicTab + "endif\n";
+            }
+            t << "  ' OUT(depth:"<< startDepth << ":index:" << i << ")\n";
+            return -1;
+        }
+    }
+    t << "  ' OUT("<< startDepth << ")\n";
+    return -1;
 }
 
 void MemberDef::addFlowKeyWord()
