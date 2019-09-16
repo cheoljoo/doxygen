@@ -2214,6 +2214,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
                                           }
 					}
 <AlignAs>"("                            { 
+    printf("AlignAs %s\n",yytext);
                                           g_bracketCount=1;
 					  g_code->codify(yytext);
                                           BEGIN( AlignAsEnd );
@@ -2224,8 +2225,10 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 <AlignAs>.                              { printf("AlignAs %s\n",yytext);  g_code->codify(yytext); }
 <AlignAsEnd>"("                         { g_code->codify(yytext);
                                           g_bracketCount++; 
+                                          printf("AlignAsEnd %s\n",yytext);
                                         }
 <AlignAsEnd>")"                         { 
+    printf("AlignAsEnd %s\n",yytext);
                                           g_code->codify(yytext);
                                           if (--g_bracketCount<=0)
                                           {
@@ -2742,7 +2745,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
                       if( (g_bracketCount > 0) && (TRUE == g_currentMemberFlowInfoBool) ){ g_currentMemberFlowInfo.m_condition += yytext; }
                       if(g_bracketCount == 0){ 
                         //printf("FuncCall B? set m_condtion  g_bracketCount=%d STR=%s\n",g_bracketCount,g_currentMemberFlowInfo.m_str.data());
-                        printf("FuncCall B? set m_condtion  g_bracketCount=%d g_currentMemberFlowInfoBool=%d STR=%s\n",g_bracketCount,g_currentMemberFlowInfoBool , g_currentMemberFlowInfo.getFlowString());
+                        printf("Body FuncCall B? set m_condtion  g_bracketCount=%d g_currentMemberFlowInfoBool=%d STR=%s\n",g_bracketCount,g_currentMemberFlowInfoBool , g_currentMemberFlowInfo.getFlowString());
                         //g_currentMemberFlowInfo.m_condition = g_currentMemberFlowInfo.m_str; 
                         // g_currentMemberFlowInfo.m_str = "";
                         if(g_currentMemberFlowInfoBool && (!strncmp(yytext,")" , strlen(")"))) ){
@@ -3063,8 +3066,35 @@ printf("<Body line=%d SCOPENAME/B3 %s\n",g_yyLineNr,yytext);
   					  BEGIN( MemberCall ); 
 					}
 <MemberCall>{SCOPETNAME}/{BN}*"(" 	{
-printf("<MemberCall SCOPENAME/BN %s\n",yytext);
-                      if(TRUE == g_currentMemberFlowInfoBool ){ g_currentMemberFlowInfo.m_condition += yytext; }
+printf("<MemberCall SCOPENAME/BN %s Bool:%d bracket:%d\n",yytext,g_currentMemberFlowInfoBool,g_bracketCount);
+                      if(TRUE == g_currentMemberFlowInfoBool ){ 
+                            g_currentMemberFlowInfo.m_condition += yytext; 
+                      } else {
+                        MemberFlowInfo tempMemberFlowInfo;
+
+                        printf("<MemberCall SCOPENAME/BN %s m_condition[%s]\n",yytext,qPrint( g_currentMemberFlowInfo.m_condition));
+                        Definition *def;
+                        def = g_theCallContext.getScope();
+                        if (def && def->definitionType()==Definition::TypeClass)
+					    {
+                            tempMemberFlowInfo.m_condition += def->name().data(); 
+                            tempMemberFlowInfo.m_condition += "::"; 
+                            tempMemberFlowInfo.m_condition += yytext; 
+                        } else {
+                            tempMemberFlowInfo.m_condition += yytext; 
+                        }
+
+                        tempMemberFlowInfo.m_flow = MemberFlowInfo::CallFunction; 
+                        tempMemberFlowInfo.m_hasCondition = TRUE;
+                        tempMemberFlowInfo.m_depth = g_bodyCurlyCount;
+                        if(g_currentMemberDef){
+                            FileDef *tfd = g_currentMemberDef->getFileDef();
+                            tempMemberFlowInfo.m_filename = tfd->name();
+                            tempMemberFlowInfo.m_lineNr = g_yyLineNr;
+                        }
+                        g_currentMemberDef->addFlowInfo(tempMemberFlowInfo);
+                      }
+                      printf("<MemberCall SCOPENAME/BN %s m_condition[%s] bracket:%d\n",yytext,qPrint( g_currentMemberFlowInfo.m_condition),g_bracketCount);
                       //if( (g_bracketCount > 0) && (TRUE == g_currentMemberFlowInfoBool) ){ g_currentMemberFlowInfo.m_condition += yytext; }
 					  if (g_theCallContext.getScope())
 					  {
@@ -3082,7 +3112,8 @@ printf("<MemberCall SCOPENAME/BN %s\n",yytext);
   					    g_name.resize(0);
 					  }
 					  g_type.resize(0);
-					  g_bracketCount=0;
+					  // charles : 위에서 1인데 값자기 0이 되면 안됨.   g_bracketCount=0;
+                      // doxygen bug!!!
 					  if (g_memCallContext==Body)
 					  {
 					    BEGIN(FuncCall);
@@ -3486,7 +3517,7 @@ printf("<MemberCall SCOPENAME/B %s\n",yytext);
                       if( (g_bracketCount > 0) && (TRUE == g_currentMemberFlowInfoBool) ){ g_currentMemberFlowInfo.m_condition += yytext; }
                       if(g_bracketCount == 0){ 
                         //printf("FuncCall B? set m_condtion  g_bracketCount=%d STR=%s\n",g_bracketCount,g_currentMemberFlowInfo.m_str.data());
-                        printf("FuncCall B? set m_condtion  g_bracketCount=%d g_currentMemberFlowInfoBool=%d STR=%s\n",g_bracketCount,g_currentMemberFlowInfoBool , g_currentMemberFlowInfo.getFlowString());
+                        printf("FuncCall B? set m_condtion=%s  g_bracketCount=%d g_currentMemberFlowInfoBool=%d STR=%s\n",qPrint(g_currentMemberFlowInfo.m_condition),g_bracketCount,g_currentMemberFlowInfoBool , g_currentMemberFlowInfo.getFlowString());
                         //g_currentMemberFlowInfo.m_condition = g_currentMemberFlowInfo.m_str; 
                         // g_currentMemberFlowInfo.m_str = "";
                         if(g_currentMemberFlowInfoBool){
@@ -3694,7 +3725,7 @@ printf("<MemberCall SCOPENAME/B %s\n",yytext);
 					  BEGIN( MemberCall2 ); 
 					}
 <FuncCall,MemberCall2>("("{B}*("*"{B}*)+{ID}*{B}*")"{B}*)/("."|"->") { 
-    printf("FuncCall BIDB %s\n",yytext);
+    printf("MemberCall2 BIDB %s\n",yytext);
   					  g_code->codify(yytext);
 					  int s=0;while (!isId(yytext[s])) s++;
                                           int e=(int)yyleng-1;while (!isId(yytext[e])) e--;
@@ -3702,6 +3733,7 @@ printf("<MemberCall SCOPENAME/B %s\n",yytext);
 					  BEGIN( MemberCall2 ); 
 					}
 <MemberCall2>{ID}/([ \t\n]*"(")         { 
+    printf("MemberCall2 ID %s\n",yytext);
   					  if (!g_args.isEmpty())
 					    generateMemberLink(*g_code,g_args,yytext);
 					  else
@@ -3710,12 +3742,15 @@ printf("<MemberCall SCOPENAME/B %s\n",yytext);
 					  BEGIN( FuncCall );
 					}
 <MemberCall2>{ID}/([ \t\n]*("."|"->"))  {
+    printf("MemberCall2 ID-> %s\n",yytext);
   					  //g_code->codify(yytext);
 					  g_name=yytext; 
 					  generateClassOrGlobalLink(*g_code,yytext);
 					  BEGIN( MemberCall2 ); 
     					}
 <MemberCall2>"->"|"."			{
+    printf("MemberCall2 -> %s\n",yytext);
+                      if(TRUE == g_currentMemberFlowInfoBool ){ g_currentMemberFlowInfo.m_condition += yytext; }
   				          if (yytext[0]=='-') // -> could be overloaded
 					  {
 					    updateCallContextForSmartPointer();

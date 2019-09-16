@@ -5190,6 +5190,7 @@ bool isStartFlowKeyword(MemberFlowInfo::FlowKW flow)
             case MemberFlowInfo::ForEach       :
             case MemberFlowInfo::If            :
             case MemberFlowInfo::While         :
+            case MemberFlowInfo::CallFunction  :
                 r = TRUE;
                 break;
     };
@@ -5208,7 +5209,7 @@ int MemberDef::recursiveProcessPlantuml(QTextStream& t, int startIndex,MemberFlo
     if(startDepth >= cpmfi->m_depth){   // the same depth or return case (decline the depth)
         return startIndex-1; 
     }
-    t << "  ' IN("<< startDepth << ")\n";
+    t << "  ' IN(depth:"<< startDepth << ",index:" << startIndex << ")\n";
 
     for (int i=startIndex;i<m_flowInfo.count();++i){
         cpmfi = m_flowInfo.at(i);
@@ -5217,7 +5218,7 @@ int MemberDef::recursiveProcessPlantuml(QTextStream& t, int startIndex,MemberFlo
         QCString incTab(basicTab);
         incTab += "\t";
 
-        t << basicTab << "' {" << i << "} [ADDFLOW] func:" << declaration() << " ,flow:" << cpmfi->getFlowString() << " ,has:" << cpmfi->m_hasCondition << " ,depth:" << cpmfi->m_depth << " ,file:" << qPrint(cpmfi->m_filename) << " ,line:" << cpmfi->m_lineNr << " ,cond:" << qPrint(cpmfi->m_condition) << "\n";
+        t << basicTab << "' {" << i << "} [ADDFLOW] func:" << declaration() << " ,flow:" << cpmfi->getFlowString() << " ,loopflow:" << loopStartFlow << " ,has:" << cpmfi->m_hasCondition << " ,depth:" << cpmfi->m_depth << " ,file:" << qPrint(cpmfi->m_filename) << " ,line:" << cpmfi->m_lineNr << " ,cond:" << qPrint(cpmfi->m_condition) << "\n";
 
         switch(cpmfi->m_flow){
             case MemberFlowInfo::Break         :
@@ -5308,6 +5309,9 @@ int MemberDef::recursiveProcessPlantuml(QTextStream& t, int startIndex,MemberFlo
                 t << incTab << ":elseif text;\n";
                 i = recursiveProcessPlantuml(t,i+1,cpmfi->m_flow,cpmfi->m_depth);
                 break;
+            case MemberFlowInfo::CallFunction  :
+                t << basicTab << ":" << cpmfi->m_condition << ";\n";
+                break;
         };
 
         if(isStartFlowKeyword(cpmfi->m_flow)){ loopStartFlow =cpmfi->m_flow; }
@@ -5319,7 +5323,7 @@ int MemberDef::recursiveProcessPlantuml(QTextStream& t, int startIndex,MemberFlo
                 if(MemberFlowInfo::If == loopStartFlow){
                     t << basicTab << "endif\n";
                 }
-                t << "  ' OUT("<< startDepth << "|" << i << ")\n";
+                t << "  ' OUT(depth:"<< startDepth << "<index:" << i << ")\n";
                 return i;
             }
             if(isStartFlowKeyword(npmfi->m_flow) && (MemberFlowInfo::If == loopStartFlow) ){
@@ -5329,7 +5333,7 @@ int MemberDef::recursiveProcessPlantuml(QTextStream& t, int startIndex,MemberFlo
             if(MemberFlowInfo::If == loopStartFlow){
                     t << basicTab << "endif\n";
             }
-            t << "  ' OUT("<< startDepth << ":" << i << ")\n";
+            t << "  ' OUT(depth:"<< startDepth << ":index:" << i << ")\n";
             return 4096;
         }
     }

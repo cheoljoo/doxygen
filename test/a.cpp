@@ -128,9 +128,12 @@ int example(int& aa,int &bb)
 
 int main()
 {
-    ClassA p(0,0);
+    ClassA pptube(0,0);
 
-    p.classAfunc(3);
+    pptube.classAfunc(3);
+
+    ClassA* aatube;
+    aatube->classAfunc(4);
    	int number;
     cout << "Enter an integer: ";
     cin >> number;
@@ -161,6 +164,7 @@ int main()
    for( a = 10; 
            a < 20; a = a + 1 ) {
       cout << "for loop value of a: " << a << endl;
+      aatube->classAfunc(4);
    }
 
    // while loop execution
@@ -250,6 +254,17 @@ int main()
   return 0;
 }
 
+template <class T>
+class mypair {
+    T values [2];
+    public:
+    mypair (T first, T second)
+    {
+        values[0]=first; values[1]=second;
+    }
+    T getPair(){ return value[0]; }
+};
+
 /**
  *  @brief  TT ClassA::classAfunc(aa) TT ClassA::classAfunc()  classAfunc
  */
@@ -258,5 +273,13 @@ void last()
     int aa =1 , bb = 3;
 	if ( aa < bb ) {
 		aa = bb;
+        mypair<double> myfloats (3.0, 2.18); 
+	}
+    mypair<int> myobject (115, 36);
+    myobject.getPair();
+
+	if ( aa < myobject.getPair() ) {
+        int ccc;
+		ccc = bb;
 	}
 }
