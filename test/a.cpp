@@ -93,6 +93,7 @@ void ClassA::classAfunc(int t)
      */
     if(t == 3){
         t=1;
+        last();
     /**
      * @brief Condition else
      */
