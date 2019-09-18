@@ -2,7 +2,7 @@
 - it is not sufficient for doxygen. But , I make this edition (version) briefly to help fast.
 - Use this function when you make a flow chart for ASPICE.
 
-## result example [examples/flow.cpp](./examples/flow.cpp)
+## result example [test/a.cpp](./test/a.cpp)
 
 - This is auto-generated result ( visual studio code) in function : ClassA::classAfunc() from simple source code.
 ![Result1](./doc/FC_SD1.png)
