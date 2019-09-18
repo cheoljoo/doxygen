@@ -1,4 +1,4 @@
-# Draw FlowChart automatically with plantuml from your source code
+# Draw Flow Chart & Sequence Diagram automatically with plantuml from your source code
 - it is not sufficient for doxygen. But , I make this edition (version) briefly to help fast.
 - Use this function when you make a flow chart for ASPICE.
 
@@ -16,7 +16,7 @@
 ## how to run
 
 - doxygen compile 
-    - git clone doxygen   ( git clone -b  190830/flowKeywordsMakeFileDirectly  https://github.com/cheoljoo/doxygen.git)
+    - ```git clone -b  FlowChart_SequenceDiagram  https://github.com/cheoljoo/doxygen.git```
     - http://www.doxygen.nl/manual/install.html
       - you can get execute file in doxygen/build/bin
 - how to run & test (a.cpp is a similar sample with [examples/flow.cpp](./examples/flow.cpp)  )
@@ -27,7 +27,7 @@
 
 ## how to show the result (plantuml.md)
 - this is plantuml file
-- you can show the result with vcode or atom editor ( need "markdown preview enhanced" plugin)
+- you can show the result with **vcode** or atom editor ( need "markdown preview enhanced" plugin)
 
 
 ## test case 
