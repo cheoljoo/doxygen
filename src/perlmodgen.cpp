@@ -1746,6 +1746,31 @@ void PerlModGenerator::generatePerlModForMember(MemberDef *md,Definition *)
     .addFieldQuotedString("virtualness", getVirtualnessName(md->virtualness()))
     .addFieldQuotedString("protection", getProtectionName(md->protection()))
     .addFieldBoolean("static", md->isStatic());
+
+  // for MemberFlowInfo
+  if(md->m_flowInfo.count() > 1){
+      QListIterator<MemberFlowInfo> mfil(md->m_flowInfo);
+      MemberFlowInfo *pmfi;
+      int i=0;
+      QCString p;
+
+      m_output.addFieldQuotedString("flowchartplantuml", md->m_flowChartPlantuml);     // flow chart plantuml
+      m_output.addFieldQuotedString("sequencediagramplantuml", md->m_sequenceDiagramPlantuml);  // sequence diagram plantuml
+      m_output.openList("flowinfo");
+      for (mfil.toFirst();(pmfi=mfil.current());++mfil,++i){
+          m_output.openHash();
+          m_output.addFieldQuotedString("keyword", pmfi->getFlowString());
+          m_output.addFieldBoolean("hascondition", pmfi->m_hasCondition);
+          p.setNum(pmfi->m_depth);
+          m_output.addFieldQuotedString("depth", p);
+          m_output.addFieldQuotedString("file", pmfi->m_filename);
+          p.setNum(pmfi->m_lineNr);
+          m_output.addFieldQuotedString("line", p);
+          m_output.addFieldQuotedString("condition", pmfi->m_condition);
+          m_output.closeHash();
+      }
+      m_output.closeList();
+  }
   
   addPerlModDocBlock(m_output,"brief",md->getDefFileName(),md->getDefLine(),md->getOuterScope(),md,md->briefDescription());
   addPerlModDocBlock(m_output,"detailed",md->getDefFileName(),md->getDefLine(),md->getOuterScope(),md,md->documentation());

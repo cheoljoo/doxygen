@@ -335,7 +335,6 @@ class MemberDef : public Definition
     QList<MemberFlowInfo> m_flowInfo;
     QCString m_flowChartPlantuml;
     QCString m_sequenceDiagramPlantuml;
-    //void addFlowInfo(MemberFlowInfo::FlowKW flow,QCString condition,int depth,const char* filename,int line);
     void addFlowInfo(MemberFlowInfo mfi);
     void writePlantuml();
     int recursiveFlowChartPlantuml(QTextStream& t, int startIndex,MemberFlowInfo::FlowKW startFlow,int startDepth);
