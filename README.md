@@ -4,11 +4,14 @@
 
 ## result example [examples/flow.cpp](./examples/flow.cpp)
 
-- This is auto-generated result ( visual studio code) from source code.
-![Result1](./doc/FC1.png)
+- This is auto-generated result ( visual studio code) in function : ClassA::classAfunc() from simple source code.
+![Result1](./doc/FC_SD1.png)
 
-- nested case:
-![Result2](./doc/FC2.png)
+- if , for , while etc... in function main()
+![Result2](./doc/FC_SD2.png)
+
+- nested if  in function main()
+![Result3](./doc/FC_SD3.png)
 
 
 	- It gives the detailed branch counts (# of test cases) with flow charts.  
