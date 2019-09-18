@@ -49,7 +49,10 @@ public:
         If,
         Else,
     };
-    ClassA(int aa=0,int bb=0):c(aa),d(bb) { derivedB(); } 
+    ClassA(int aa=0,int bb=0):c(aa),d(bb) { 
+        derivedB(); 
+        last();
+    } 
     void classAfunc(int t);
 };
 
