@@ -1755,7 +1755,7 @@ void PerlModGenerator::generatePerlModForMember(MemberDef *md,Definition *)
       QCString p;
 
       m_output.addFieldQuotedString("flowchartplantuml", md->m_flowChartPlantuml);     // flow chart plantuml
-      m_output.addFieldQuotedString("sequencediagramplantuml", md->m_sequenceDiagramPlantuml);  // sequence diagram plantuml
+      m_output.addFieldQuotedString("flowsequencediagramplantuml", md->m_sequenceDiagramPlantuml);  // sequence diagram plantuml
       m_output.openList("flowinfo");
       for (mfil.toFirst();(pmfi=mfil.current());++mfil,++i){
           m_output.openHash();
