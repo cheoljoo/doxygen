@@ -1,3 +1,27 @@
+Charles Todo and How
+- -d printtree 
+    - <b> </b> s->enable()로 처리되는 것을 확인하였고, markdown에서도 perl이 아닌 printtree(PrintDocVisitor)방식을 사용해야함
+        - PrintDocVisitor *v = new PrintDocVisitor;
+        - root->accept(v);
+        - 어디가 먼저 인가?  accept를 쓰긴하는데..  memberDef 보다 detailed 부분과 뭐가 먼저인가?
+            - memberDef를 보고 그 안의 detailed를 볼때 docparser를 수행하는 것으로 보인다.  
+- Perl_string 같은 것은 어떻게 처리해야 하는가?
+    - 일반적인 PrintDocVistor에서는 DocSymbol에 대해서 HtmlEntityMapper::instance()->utf8(s->symbol(),TRUE) 사용
+    - 그러나 , perl에서는 HtmlEntityMapper::instance()->perl()을 사용하고 여기에서 Perl_stringㅇ라는 것이 존재
+    - utf8() 을 사용하는게 답 일듯!   
+- Table Example
+    | AA | BB |
+    |---|---|
+    | - a | .1 T |
+    | b | <ol> <li> 1. T </li>  <li> 2. R </li> <li> TTT </li>  <li> PP </li> </ol> <ul> <li> 1. T </li>  <li> 2. R </li> <li> TTT </li>  <li> PP </li> </ul> |
+    | T | 1. T <br> 1.K |
+- 
+
+
+
+
+
+
 Doxygen Internals {#mainpage}
 =================
 

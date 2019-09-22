@@ -3081,6 +3081,20 @@ put in front of it.
       </docs>
     </option>
   </group>
+  <group name='MarkDown' docs='Configuration options related to the Markdown module output'>
+    <option type='bool' id='GENERATE_MARKDOWN' defval='0'>
+      <docs>
+<![CDATA[
+ If the \c GENERATE_MARKDOWN tag is set to \c YES, doxygen will
+ generate a MarkDown file that captures the structure of
+ the code including all documentation.
+ <br>Note that this
+ feature is still experimental and incomplete at the
+ moment.
+]]>
+      </docs>
+    </option>
+  </group>
   <group name='Preprocessor' docs='Configuration options related to the preprocessor'>
     <option type='bool' id='ENABLE_PREPROCESSING' defval='1'>
       <docs>

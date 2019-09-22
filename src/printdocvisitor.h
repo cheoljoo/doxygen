@@ -37,19 +37,19 @@ class PrintDocVisitor : public DocVisitor
     void visit(DocWord *w)
     {
       indent_leaf();
-      printf("%s",w->word().data());
+      printf("%s [visit DocWord]",w->word().data());
     }
     void visit(DocLinkedWord *w)
     {
       indent_leaf();
-      printf("%s",w->word().data());
+      printf("%s [visit DocLinkedWord]",w->word().data());
     }
     void visit(DocWhiteSpace *w)
     {
       indent_leaf();
       if (m_insidePre)
       {
-        printf("%s",w->chars().data());
+        printf("%s [visit DocWhiteSpace]",w->chars().data());
       }
       else
       {
@@ -62,7 +62,7 @@ class PrintDocVisitor : public DocVisitor
       const char *res = HtmlEntityMapper::instance()->utf8(s->symbol(),TRUE);
       if (res)
       {
-        printf("%s",res);
+        printf("%s [visit DocSymbol]",res);
       }
       else
       {
@@ -75,7 +75,7 @@ class PrintDocVisitor : public DocVisitor
       const char *res = EmojiEntityMapper::instance()->name(s->index());
       if (res)
       {
-        printf("%s",res);
+        printf("%s [visit DocEmoji]",res);
       }
       else
       {
@@ -85,7 +85,7 @@ class PrintDocVisitor : public DocVisitor
     void visit(DocURL *u)
     {
       indent_leaf();
-      printf("%s",u->url().data());
+      printf("%s [visit DocURL]",u->url().data());
     }
     void visit(DocLineBreak *)
     {
@@ -163,7 +163,7 @@ class PrintDocVisitor : public DocVisitor
         case DocVerbatim::Msc: printf("<msc>"); break;
         case DocVerbatim::PlantUML: printf("<plantuml>"); break;
       }
-      printf("%s",s->text().data());
+      printf("%s [visit DocVerbatim]",s->text().data());
       switch(s->type())
       {
         case DocVerbatim::Code: printf("</code>"); break;
@@ -379,22 +379,22 @@ class PrintDocVisitor : public DocVisitor
     void visitPre(DocHtmlList *s)
     {
       indent_pre();
-      if (s->type()==DocHtmlList::Ordered) printf("<ol>\n"); else printf("<ul>\n");
+      if (s->type()==DocHtmlList::Ordered) printf("<ol [visitPre DocHtmlList]>\n"); else printf("<ul>\n");
     }
     void visitPost(DocHtmlList *s) 
     {
       indent_post();
-      if (s->type()==DocHtmlList::Ordered) printf("</ol>\n"); else printf("</ul>\n");
+      if (s->type()==DocHtmlList::Ordered) printf("</ol [visitPost DocHtmlList]>\n"); else printf("</ul>\n");
     }
     void visitPre(DocHtmlListItem *)
     {
       indent_pre();
-      printf("<li>\n");
+      printf("<li [visitPre DocHtmlListItem]>\n");
     }
     void visitPost(DocHtmlListItem *) 
     {
       indent_post();
-      printf("</li>\n");
+      printf("</li [visitPost DocHtmlListItem]>\n");
     }
     //void visitPre(DocHtmlPre *)
     //{
@@ -693,7 +693,7 @@ class PrintDocVisitor : public DocVisitor
     void visitPre(DocText *)
     {
       indent_pre();
-      printf("<text>\n");
+      printf("<text [visitPre DocText]>\n");
     }
     void visitPost(DocText *)
     {
