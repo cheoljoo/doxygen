@@ -64,6 +64,7 @@
 #include "docbookgen.h"
 #include "defgen.h"
 #include "perlmodgen.h"
+#include "markdowngen.h"
 #include "reflist.h"
 #include "pagedef.h"
 #include "bufstr.h"
@@ -11874,6 +11875,11 @@ void generateOutput()
     generatePerlMod();
     g_s.end();
   }
+
+    g_s.begin("Generating Perl module output...\n");
+    generateMarkDown();
+    g_s.end();
+
   if (generateHtml && searchEngine && serverBasedSearch)
   {
     g_s.begin("Generating search index\n");

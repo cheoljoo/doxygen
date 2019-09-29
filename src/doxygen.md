@@ -17,6 +17,9 @@ Charles Todo and How
     | T | 1. T <br> 1.K |
 - 
 
+2019.09.28 change markdowngen.cpp to compile
+- 
+
 
 
 

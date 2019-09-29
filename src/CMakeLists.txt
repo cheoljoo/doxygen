@@ -230,6 +230,7 @@ add_library(_doxygen STATIC
     outputlist.cpp
     pagedef.cpp
     perlmodgen.cpp
+    markdowngen.cpp
     qhp.cpp
     qhpxmlwriter.cpp
     reflist.cpp
