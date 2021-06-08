@@ -17,6 +17,26 @@
 	- if\s*(   ->   go into state "FuncCall"
 	- it does not have enough information when we generate XML. (Do not have condition value)
 
+# how to use it
+- cd test
+- doxygen
+    - a.cpp is examaple
+- if you want to use your files.
+    - only use cpp file.
+    - but this cpp file should include your headerfile contents .
+``` exmaple.cpp
+// header contents
+class TT { 
+    ...
+    A()
+};
+
+// cpp contents
+TT::A()
+{
+}
+```
+
 # perlmod
 - make markdown document in perlmod
 - perlmodgen.cpp

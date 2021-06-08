@@ -503,7 +503,7 @@ static void startCodeLine()
     //lineAnchor.sprintf("l%05d",g_yyLineNr);
    
     Definition *d   = g_sourceFileDef->getSourceDefinition(g_yyLineNr);
-    //printf("%s:startCodeLine(%d)=%p\n",g_sourceFileDef->name().data(),g_yyLineNr,d);
+    printf("%s:startCodeLine(%d)=%p\n",g_sourceFileDef->name().data(),g_yyLineNr,d);
     if (!g_includeCodeFragment && d)
     {
       g_currentDefinition = d;
@@ -1896,13 +1896,13 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 
 <*>\x0d
 <Body>^([ \t]*"#"[ \t]*("include"|"import")[ \t]*)("<"|"\"") {
-    printf("<Body include %s\n",yytext);
+    printf("<Body include yytext=%s\n",yytext);
   					  startFontClass("preprocessor");
 					  g_code->codify(yytext);
   					  BEGIN( ReadInclude ); 
 					}
 <Body>("@interface"|"@implementation"|"@protocol")[ \t\n]+ { 
-    printf("<Body interface %s\n",yytext);
+    printf("<Body interface yytext=%s\n",yytext);
                                           g_insideObjC=TRUE;
   					  startFontClass("keyword");
   					  codifyLines(yytext);
@@ -1911,7 +1911,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					    BEGIN( ClassName ); 
 					}
 <Body>(("public"|"private"){B}+)?("ref"|"value"|"interface"|"enum"){B}+("class"|"struct") {
-    printf("<Body public %s\n",yytext);
+    printf("<Body public yytext=%s\n",yytext);
   					  if (g_insideTemplate) REJECT;
   					  startFontClass("keyword");
   					  codifyLines(yytext);
@@ -1919,14 +1919,14 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					  BEGIN( ClassName ); 
 					}
 <Body>"property"|"event"/{BN}*			{ 
-    printf("<Body event %s\n",yytext);
+    printf("<Body event yytext=%s\n",yytext);
   					  if (g_insideTemplate) REJECT;
   					  startFontClass("keyword");
   					  codifyLines(yytext);
 					  endFontClass();
 					}
 <Body>(KEYWORD_CPPCLI_DATATYPE|("partial"{B}+)?"class"|"struct"|"union"|"namespace"|"interface"){B}+ { 
-    printf("<Body CPPCLI %s\n",yytext);
+    printf("<Body CPPCLI yytext=%s\n",yytext);
   					  startFontClass("keyword");
   					  codifyLines(yytext);
 					  endFontClass();
@@ -1934,7 +1934,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					    BEGIN( ClassName ); 
 					}
 <Body>("package")[ \t\n]+ 		{ 
-    printf("<Body package %s\n",yytext);
+    printf("<Body package yytext=%s\n",yytext);
   					  startFontClass("keyword");
   					  codifyLines(yytext);
 					  endFontClass();
@@ -1946,7 +1946,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					  BEGIN(Body);
   					}
 <Body,ClassVar,Bases>"-"|"+"		{
-    printf("<Body -+ %s\n",yytext);
+    printf("<Body -+ yytext=%s\n",yytext);
                       if(TRUE == g_currentMemberFlowInfoBool ){ g_currentMemberFlowInfo.m_condition += yytext; }
 					  if (!g_insideObjC || g_insideBody)
 					  { 
@@ -2095,7 +2095,8 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					}
 <Body,FuncCall>"{"			{ 
                       g_currentMemberFlowInfoElse = FALSE;  // check the status of not "else if"
-                            printf("FuncCall14 \{ %s\n",yytext);
+                            printf("FuncCall14 \{ yytext=%s\n",yytext);
+                            printf("FuncCall8 g_currentMemberDef=%p\n",g_currentMemberDef); if(g_currentMemberDef){ printf("def=%s\n",g_currentMemberDef->definition()); }
                                           g_theVarContext.pushScope();
 
                                           DBG_CTX((stderr,"** scope stack push INNERBLOCK\n"));
@@ -2116,7 +2117,8 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					  BEGIN( Body );
 					}
 <Body,FuncCall,MemberCall,MemberCall2>"}"  { 
-                            printf("FuncCall14 } %s\n",yytext);
+                            printf("FuncCall14 } yytext=%s\n",yytext);
+                            printf("FuncCall8 g_currentMemberDef=%p\n",g_currentMemberDef); if(g_currentMemberDef){ printf("def=%s\n",g_currentMemberDef->definition()); }
                                           g_theVarContext.popScope();
   					  g_type.resize(0); 
 					  g_name.resize(0);
@@ -2194,7 +2196,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					}
 <ClassName>{ID}("."{ID})*	        |
 <ClassName>{ID}("::"{ID})*	        {
-    printf("classname08 %s\n",yytext);
+    printf("classname08 yytext=%s\n",yytext);
                                           if(g_insideCS)
                                             g_curClassName=substitute(yytext,".","::");
                                           else
@@ -2214,7 +2216,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
                                           }
 					}
 <AlignAs>"("                            { 
-    printf("AlignAs %s\n",yytext);
+    printf("AlignAs yytext=%s\n",yytext);
                                           g_bracketCount=1;
 					  g_code->codify(yytext);
                                           BEGIN( AlignAsEnd );
@@ -2222,13 +2224,13 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 <AlignAs>\n                             { g_yyLineNr++; 
                                           codifyLines(yytext);
                                         }
-<AlignAs>.                              { printf("AlignAs %s\n",yytext);  g_code->codify(yytext); }
+<AlignAs>.                              { printf("AlignAs yytext=%s\n",yytext);  g_code->codify(yytext); }
 <AlignAsEnd>"("                         { g_code->codify(yytext);
                                           g_bracketCount++; 
-                                          printf("AlignAsEnd %s\n",yytext);
+                                          printf("AlignAsEnd yytext=%s\n",yytext);
                                         }
 <AlignAsEnd>")"                         { 
-    printf("AlignAsEnd %s\n",yytext);
+    printf("AlignAsEnd yytext=%s\n",yytext);
                                           g_code->codify(yytext);
                                           if (--g_bracketCount<=0)
                                           {
@@ -2238,7 +2240,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 <AlignAsEnd>\n                          { g_yyLineNr++; 
                                           codifyLines(yytext); 
                                         }
-<AlignAsEnd>.                           { printf("AlignASEnd %s\n",yytext); g_code->codify(yytext); }
+<AlignAsEnd>.                           { printf("AlignASEnd yytext=%s\n",yytext); g_code->codify(yytext); }
 <ClassName>{ID}("\\"{ID})*		{ // PHP namespace
                                           g_curClassName=substitute(yytext,"\\","::");
   					  g_scopeStack.push(CLASSBLOCK);
@@ -2273,14 +2275,14 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
   					  BEGIN( Bases ); 
 					}
 <ClassVar>("sealed"|"abstract")/{BN}*(":"|"{") {
-					  DBG_CTX((stderr,"***** C++/CLI modifier %s on g_curClassName=%s\n",yytext,g_curClassName.data()));
+					  DBG_CTX((stderr,"***** C++/CLI modifier %s on g_curClassName:yytext=%s\n",yytext,g_curClassName.data()));
   					  startFontClass("keyword");
   					  codifyLines(yytext);
 					  endFontClass();
   					  BEGIN( CppCliTypeModifierFollowup ); 
 					}
 <ClassVar>{ID}				{
-    printf("classvar ID %s\n",yytext);
+    printf("classvar ID yytext=%s\n",yytext);
   					  g_type = g_curClassName.copy();
 					  g_name = yytext;
 					  if (g_insideBody)
@@ -2290,7 +2292,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					  generateClassOrGlobalLink(*g_code,yytext);
   					}
 <ClassName,ClassVar,CppCliTypeModifierFollowup>{B}*":"{B}*	{
-    printf("classvar02  %s\n",yytext);
+    printf("classvar02  yytext=%s\n",yytext);
   					  codifyLines(yytext);
 					  g_curClassBases.clear();
   					  BEGIN( Bases ); 
@@ -2298,7 +2300,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 <PackageName>[ \t]*";"			|
 <Bases>^{B}*/"@"{ID}                    | // Objective-C interface
 <Bases,ClassName,ClassVar,CppCliTypeModifierFollowup>{B}*"{"{B}* {
-    printf("classvar01  %s\n",yytext);
+    printf("classvar01  yytext=%s\n",yytext);
                                           g_theVarContext.pushScope();
   					  g_code->codify(yytext);
 					  if (YY_START==ClassVar && g_curClassName.isEmpty())
@@ -2354,7 +2356,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					  endFontClass();
 					}
 <Bases>{SEP}?({ID}{SEP})*{ID}           { 
-					  DBG_CTX((stderr,"%s:addBase(%s)\n",g_curClassName.data(),yytext));
+					  DBG_CTX((stderr,"yytext=%s:addBase(%s)\n",g_curClassName.data(),yytext));
   					  g_curClassBases.inSort(yytext); 
 					  generateClassOrGlobalLink(*g_code,yytext);
 					}
@@ -2405,7 +2407,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
   					
 
 <Body>{SCOPEPREFIX}?"operator"{B}*"()"{B}*/"(" {
-    printf("body001  %s\n",yytext);
+    printf("body001  yytext=%s\n",yytext);
   					  addType();
 					  generateFunctionLink(*g_code,yytext);
   					  g_bracketCount=0;
@@ -2414,7 +2416,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
   					  BEGIN( FuncCall );
 					}
 <Body>{SCOPEPREFIX}?"operator"/"("      {
-    printf("body002  %s\n",yytext);
+    printf("body002  yytext=%s\n",yytext);
   					  addType();
 					  generateFunctionLink(*g_code,yytext);
   					  g_bracketCount=0;
@@ -2423,7 +2425,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
   					  BEGIN( FuncCall );
                                         }
 <Body>{SCOPEPREFIX}?"operator"[^a-z_A-Z0-9\(\n]+/"(" {
-    printf("body003  %s\n",yytext);
+    printf("body003  yytext=%s\n",yytext);
   					  addType();
 					  generateFunctionLink(*g_code,yytext);
   					  g_bracketCount=0;
@@ -2432,7 +2434,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
   					  BEGIN( FuncCall );
 					}
 <Body,TemplDecl>("template"|"generic")/([^a-zA-Z0-9])		{
-    printf("body004  %s\n",yytext);
+    printf("body004  yytext=%s\n",yytext);
   					  startFontClass("keyword");
   					  codifyLines(yytext);
 					  endFontClass();
@@ -2440,7 +2442,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					  g_sharpCount=0;
 					}
 <Body>"using"{BN}+"namespace"{BN}+	{
-    printf("body005  %s\n",yytext);
+    printf("body005  yytext=%s\n",yytext);
   					  startFontClass("keyword");
   					  codifyLines(yytext);
 					  endFontClass();
@@ -2455,13 +2457,13 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
                                         }
 <UsingName>\n				{ codifyLines(yytext); BEGIN(Body); }
 <UsingName>.				{ 
-    printf("usingname01  %s\n",yytext);
+    printf("usingname01  yytext=%s\n",yytext);
     codifyLines(yytext); BEGIN(Body); }
-<Body,FuncCall>"$"?"this"("->"|".")	{ printf("FuncCall1 %s\n",yytext); g_code->codify(yytext); // this-> for C++, this. for C#
+<Body,FuncCall>"$"?"this"("->"|".")	{ printf("FuncCall1 yytext=%s\n",yytext); g_code->codify(yytext); // this-> for C++, this. for C#
 					  g_prefixed_with_this_keyword = TRUE;
                                         }
 <Body>{KEYWORD}/([^a-z_A-Z0-9]) 	{
-    printf("KEYWORD/ a-z0-9 %s\n",yytext);
+    printf("KEYWORD/ a-z0-9 yytext=%s\n",yytext);
                                           if (g_insideJava && qstrcmp("internal",yytext) ==0) REJECT;
                                           if (skipLanguageSpecificKeyword(yytext)) REJECT;
   					  startFontClass("keyword");
@@ -2474,14 +2476,14 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					  endFontClass();
   					}
 <Body>{KEYWORD}/{B}* 			{
-    printf("<Body KEYWORD/B %s\n",yytext);
+    printf("<Body KEYWORD/B yytext=%s\n",yytext);
                                           if (skipLanguageSpecificKeyword(yytext)) REJECT;
   					  startFontClass("keyword");
   					  codifyLines(yytext);
 					  endFontClass();
   					}
 <Body>{KEYWORD}/{BN}*"(" 		{
-    printf("<Body KEYWORD/ BN %s\n",yytext);
+    printf("<Body KEYWORD/ BN yytext=%s\n",yytext);
                                           if (skipLanguageSpecificKeyword(yytext)) REJECT;
   					  startFontClass("keyword");
   					  codifyLines(yytext);
@@ -2489,7 +2491,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
   				          g_name.resize(0);g_type.resize(0);
   					}
 <FuncCall>"in"/{BN}*			{
-    printf("<funcCall 1 %s\n",yytext);
+    printf("<funcCall 1 yytext=%s\n",yytext);
 					  if (!g_inForEachExpression) REJECT;
   					  startFontClass("keywordflow");
   					  codifyLines(yytext);
@@ -2501,7 +2503,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
   				          g_name.resize(0);g_type.resize(0);
 					}
 <Body>{FLOWKW}/{BN}*"(" 			{
-    printf("<Body FLOWCONDITION  FLOWKW/ BN %s\n",yytext);
+    printf("<Body FLOWCONDITION  FLOWKW/ BN yytext=%s\n",yytext);
   					  startFontClass("keywordflow");
   					  codifyLines(yytext);
 					  endFontClass();
@@ -2535,7 +2537,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					  BEGIN(FuncCall);
   					}
 <Body>{FLOWCONDITION}/{BN}*"("          {
-                                        printf("<Body FLOWCONDITION/BN %s\n",yytext);
+                                        printf("<Body FLOWCONDITION/BN yytext=%s %p\n",yytext,g_currentMemberDef);
                       //g_currentMemberFlowInfo.m_str = yytext;
                       g_currentMemberFlowInfo.setFlow(yytext);
                       g_currentMemberFlowInfo.m_condition = "";
@@ -2573,20 +2575,28 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
                                           BEGIN(FuncCall);
                                         }
 <Body>{FLOWKW}/([^a-z_A-Z0-9]) 		{
-                                        printf("<Body FLOWCONDITION FLOWKW/ a-z %s\n",yytext);
+                                        printf("<Body FLOWCONDITION FLOWKW/ a-z yytext=%s\n",yytext);
                       //g_currentMemberFlowInfo.m_str = yytext;
                       g_currentMemberFlowInfo.setFlow(yytext);
                       g_currentMemberFlowInfo.m_condition = "";
                       g_currentMemberFlowInfo.m_depth = g_bodyCurlyCount;
+                                        printf("<Body FLOWCONDITION FLOWKW0 a-z yytext=%s %p\n",yytext,g_currentMemberDef);
+                    if(g_currentMemberDef){
                                             FileDef *tfd = g_currentMemberDef->getFileDef();
+                                        printf("<Body FLOWCONDITION FLOWKW1 a-z %s %p\n",yytext,g_currentMemberDef);
                       g_currentMemberFlowInfo.m_filename = tfd->name();
+                    }
                       g_currentMemberFlowInfo.m_lineNr = g_yyLineNr;
+                                        printf("<Body FLOWCONDITION FLOWKW2 a-z yytext=%s\n",yytext);
                       if( FALSE == g_currentMemberFlowInfo.m_hasCondition ){
+                                        printf("<Body FLOWCONDITION FLOWKW3 a-z %s\n",yytext);
                           g_currentMemberDef->addFlowInfo(g_currentMemberFlowInfo);
+                                        printf("<Body FLOWCONDITION FLOWKW4 a-z %s\n",yytext);
                           g_currentMemberFlowInfoBool = FALSE;
                       } else {
                           g_currentMemberFlowInfoBool = TRUE;
                       }
+                                        printf("<Body FLOWCONDITION FLOWKW5 a-z %s\n",yytext);
 
                       /** To check "else if"
                        *    if "{" or ";" follow "else" , it is not "else if".
@@ -2599,10 +2609,13 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
                                             printf("<Body FLOWKW/BN typeString=%s\n",g_currentMemberDef->typeString());
                                             printf("<Body FLOWKW/BN argsString=%s\n",g_currentMemberDef->argsString());
                                             printf("<Body FLOWKW/BN numberOfFlowKeyWords=%d\n",g_currentMemberDef->numberOfFlowKeyWords());
+                    if(g_currentMemberDef){
+                                            FileDef *tfd = g_currentMemberDef->getFileDef();
                                             printf("<Body FLOWKW/BN file name=%s  lineNr=%d\n",tfd->name().data(), g_yyLineNr);
                                             printf("<Body FLOWKW/BN file getSourceFileBase=%s\n",tfd->getSourceFileBase().data());
                                             printf("<Body FLOWKW/BN file getPath=%s\n",tfd->getPath().data());
                                             printf("<Body FLOWKW/BN file title=%s\n",tfd->title().data());
+                    }
                                             printf("<Body FLOWKW/BN g_bracketCount=%d\n",g_bracketCount);
                                             printf("<Body FLOWKW/BN g_bodyCurlyCount=%d\n",g_bodyCurlyCount);
                                             // g_currentMemberDef->memberDefinition());
@@ -2615,7 +2628,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					  }
   					}
 <Body>{FLOWCONDITION}/([^a-z_A-Z0-9]) 	{
-                                        printf("<Body FLOWCONDITION/a-z0-9 %s\n",yytext);
+                                        printf("<Body FLOWCONDITION/a-z0-9 yytext=%s\n",yytext);
                       //g_currentMemberFlowInfo.m_str = yytext;
                       g_currentMemberFlowInfo.setFlow(yytext);
                       g_currentMemberFlowInfo.m_condition = "";
@@ -2659,7 +2672,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
                                           }
                                         }
 <Body>{FLOWKW}/{B}* 			{
-                                        printf("<Body FLOWCONDITION FLOWKW/ B %s\n",yytext);
+                                        printf("<Body FLOWCONDITION FLOWKW/ B yytext=%s\n",yytext);
                       //g_currentMemberFlowInfo.m_str = yytext;
                       g_currentMemberFlowInfo.setFlow(yytext);
                       g_currentMemberFlowInfo.m_condition = "";
@@ -2690,7 +2703,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					  endFontClass();
   					}
 <Body>{FLOWCONDITION}/{B}*              {
-                                        printf("FLOWCONDITION/B %s\n",yytext);
+                                        printf("FLOWCONDITION/B yytext=%s\n",yytext);
                       //g_currentMemberFlowInfo.m_str = yytext;
                       g_currentMemberFlowInfo.setFlow(yytext);
                       g_currentMemberFlowInfo.m_condition = "";
@@ -2725,7 +2738,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
                                           endFontClass();
                                         }
 <Body>"*"{B}*")"                        { // end of cast?
-    printf("body006  %s\n",yytext);
+    printf("body006  yytext=%s\n",yytext);
   					  g_code->codify(yytext);
 					  g_theCallContext.popScope();
 					  g_bracketCount--;
@@ -2733,7 +2746,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					  BEGIN(FuncCall);
                                         }
 <Body>[\\|\)\+\-\/\%\~\!]		{
-    printf("<body> %s\n",yytext);
+    printf("<body> yytext=%s\n",yytext);
   					  g_code->codify(yytext);
   				          g_name.resize(0);g_type.resize(0);
 					  if (*yytext==')')
@@ -2775,7 +2788,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
                       }
   					}
 <Body,TemplDecl,ObjCMethod>{TYPEKW}/{B}* {
-    printf("<body>TYPEKW/B %s\n",yytext);
+    printf("<body>TYPEKW/B yytext=%s\n",yytext);
   					  startFontClass("keywordtype");
 					  g_code->codify(yytext);
 					  endFontClass();
@@ -2783,7 +2796,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
   					  g_name+=yytext; 
   					}
 <Body,TemplDecl,ObjCMethod>{TYPEKWSL}/{B}* {
-    printf("<body>TYPEKWSL/B %s\n",yytext);
+    printf("<body>TYPEKWSL/B yytext=%s\n",yytext);
                                           if (!g_insideSlice)
                                           {
                                             REJECT;
@@ -2798,7 +2811,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
                                           }
   					}
 <Body>"generic"/{B}*"<"[^\n\/\-\.\{\"\>]*">"{B}* {
-    printf("body007  %s\n",yytext);
+    printf("body007  yytext=%s\n",yytext);
   					  startFontClass("keyword");
 					  g_code->codify(yytext);
 					  endFontClass();
@@ -2806,7 +2819,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					  BEGIN(TemplDecl);
 					}
 <Body>"template"/{B}*"<"[^\n\/\-\.\{\"\>]*">"{B}* { // template<...>
-    printf("body008  %s\n",yytext);
+    printf("body008  yytext=%s\n",yytext);
   					  startFontClass("keyword");
 					  g_code->codify(yytext);
 					  endFontClass();
@@ -2848,7 +2861,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
   					  codifyLines(yytext);
 					}
 <Body,FuncCall>{CASTKW}"<"                { // static_cast<T>(
-printf("<Body CASTKW/BN %s\n",yytext);
+printf("<Body CASTKW/BN yytext=%s\n",yytext);
   					  startFontClass("keyword");
   					  codifyLines(yytext);
 					  endFontClass();
@@ -2856,13 +2869,13 @@ printf("<Body CASTKW/BN %s\n",yytext);
 					  BEGIN(TemplCast);
 					}
 <Body>"$this->"{SCOPENAME}/{BN}*[;,)\]] { // PHP member variable
-printf("<Body SCOPENAME PHP /BN %s\n",yytext);
+printf("<Body SCOPENAME PHP /BN yytext=%s\n",yytext);
 					  addType();
 					  generatePHPVariableLink(*g_code,yytext);
   					  g_name+=yytext+7; 
                                         }
 <Body,TemplCast>{SCOPENAME}{B}*"<"[^\n\/\-\.\{\"\>\(]*">"("::"{ID})*/{B}* { // A<T> *pt;
-printf("<Body SCOPENAME2 B %s\n",yytext);
+printf("<Body SCOPENAME2 B yytext=%s\n",yytext);
 					  int i=QCString(yytext).find('<');
 					  QCString kw = QCString(yytext).left(i).stripWhiteSpace();
 					  if (kw.right(5)=="_cast" && YY_START==Body)
@@ -2874,7 +2887,7 @@ printf("<Body SCOPENAME2 B %s\n",yytext);
   					  g_name+=yytext; 
 					}
 <Body>{SCOPENAME}/{BN}*[:;,)\]]		{ // "int var;" or "var, var2" or "debug(f) macro" , or int var : 5;
-printf("<Body SCOPENAME/BN %s\n",yytext);
+printf("<Body SCOPENAME/BN yytext=%s\n",yytext);
                       if(TRUE == g_currentMemberFlowInfoBool ){ g_currentMemberFlowInfo.m_condition += yytext; }
 					  addType();
 					  // changed this to generateFunctionLink, see bug 624514
@@ -2883,7 +2896,7 @@ printf("<Body SCOPENAME/BN %s\n",yytext);
   					  g_name+=yytext; 
 					}
 <Body>{SCOPENAME}/{B}* 			{ // p->func()
-printf("<Body SCOPENAME/B1 %s\n",yytext);
+printf("<Body SCOPENAME/B1 yytext=%s\n",yytext);
                       if(TRUE == g_currentMemberFlowInfoBool ){ g_currentMemberFlowInfo.m_condition += yytext; }
                       g_currentMemberFlowInfoElse = FALSE;  // check the status of not "else if"
 					  addType();
@@ -2891,7 +2904,7 @@ printf("<Body SCOPENAME/B1 %s\n",yytext);
   					  g_name+=yytext; 
 					}
 <Body>"("{B}*("*"{B}*)+{SCOPENAME}*{B}*")"/{B}*	{  // (*p)->func() but not "if (p) ..."
-printf("<Body SCOPENAME/B2 %s\n",yytext);
+printf("<Body SCOPENAME/B2 yytext=%s\n",yytext);
 					  g_code->codify(yytext);
 					  int s=0;while (s<(int)yyleng && !isId(yytext[s])) s++;
                                           int e=(int)yyleng-1;while (e>=0 && !isId(yytext[e])) e--;
@@ -2901,7 +2914,7 @@ printf("<Body SCOPENAME/B2 %s\n",yytext);
 					}
 <Body>{SCOPETNAME}{B}*"<"[^\n\/\-\.\{\"\>]*">"/{BN}*"(" |
 <Body>{SCOPETNAME}/{BN}*"("		{ // a() or c::a() or t<A,B>::a() or A\B\foo()
-printf("<Body line=%d SCOPENAME/B3 %s\n",g_yyLineNr,yytext);
+printf("<Body line=%d SCOPENAME/B3 yytext=%s\n",g_yyLineNr,yytext);
   					  addType();
 					  generateFunctionLink(*g_code,yytext);
   					  g_bracketCount=0;
@@ -2917,8 +2930,8 @@ printf("<Body line=%d SCOPENAME/B3 %s\n",g_yyLineNr,yytext);
                           tempMemberFlowInfo.m_depth = g_bodyCurlyCount;
                           if(g_currentMemberDef){
                             FileDef *tfd = g_currentMemberDef->getFileDef();
-                            printf("A2\n");
-                            tempMemberFlowInfo.m_filename = tfd->name();
+                            printf("A2 tfd[%p]\n",tfd);
+                            if(tfd) tempMemberFlowInfo.m_filename = tfd->name();
                             printf("A3\n");
                             tempMemberFlowInfo.m_lineNr = g_yyLineNr;
                             printf("A4\n");
@@ -2929,7 +2942,7 @@ printf("<Body line=%d SCOPENAME/B3 %s\n",g_yyLineNr,yytext);
   					  BEGIN( FuncCall );
 					}
 <FuncCall,Body,MemberCall,MemberCall2,SkipInits,InlineInit>{RAWBEGIN}	{
-    printf("FuncCall RAWBEGIN %s\n",yytext);
+    printf("FuncCall RAWBEGIN yytext=%s\n",yytext);
                                           QCString text=yytext;
                                           int i=text.find('R');
                                           g_code->codify(text.left(i+1));
@@ -2942,7 +2955,7 @@ printf("<Body line=%d SCOPENAME/B3 %s\n",g_yyLineNr,yytext);
   					  BEGIN( RawString );
                                         }
 <FuncCall,Body,MemberCall,MemberCall2,SkipInits,InlineInit>\"	{
-    printf("<funcCall 2 %s\n",yytext);
+    printf("<funcCall 2 yytext=%s\n",yytext);
                       if(TRUE == g_currentMemberFlowInfoBool ){ g_currentMemberFlowInfo.m_condition += yytext; }
 					  startFontClass("stringliteral");
   					  g_code->codify(yytext);
@@ -2951,7 +2964,7 @@ printf("<Body line=%d SCOPENAME/B3 %s\n",g_yyLineNr,yytext);
   					  BEGIN( SkipString );
   					}
 <FuncCall,Body,MemberCall,MemberCall2,SkipInits,InlineInit>\'	{
-    printf("<funcCall 3 %s\n",yytext);
+    printf("<funcCall 3 yytext=%s\n",yytext);
                       if(TRUE == g_currentMemberFlowInfoBool ){ g_currentMemberFlowInfo.m_condition += yytext; }
 					  startFontClass("stringliteral");
   					  g_code->codify(yytext);
@@ -2960,19 +2973,19 @@ printf("<Body line=%d SCOPENAME/B3 %s\n",g_yyLineNr,yytext);
   					  BEGIN( SkipStringS );
   					}
 <SkipString>[^\"\\\r\n]*		{ 
-    printf("<skipstring %s\n",yytext);
+    printf("<skipstring yytext=%s\n",yytext);
                       if(TRUE == g_currentMemberFlowInfoBool ){ g_currentMemberFlowInfo.m_condition += yytext; }
   					  g_code->codify(yytext);
 					}
 <SkipStringS>[^\'\\\r\n]*		{
-    printf("<skipstringS %s\n",yytext);
+    printf("<skipstringS yytext=%s\n",yytext);
   					  g_code->codify(yytext);
   					}
 <SkipString,SkipStringS>"//"|"/*"	{
   					  g_code->codify(yytext);
   					}
 <SkipString>@?\"			{
-    printf("<skipstring  @\"%s\n",yytext);
+    printf("<skipstring  @\"yytext=%s\n",yytext);
                       if(TRUE == g_currentMemberFlowInfoBool ){ g_currentMemberFlowInfo.m_condition += yytext; }
   					  g_code->codify(yytext);
 					  endFontClass();
@@ -2984,7 +2997,7 @@ printf("<Body line=%d SCOPENAME/B3 %s\n",g_yyLineNr,yytext);
   					  BEGIN( g_lastStringContext );
   					}
 <SkipString,SkipStringS>\\.		{
-    printf("<skipstring> %s\n",yytext);
+    printf("<skipstring> yytext=%s\n",yytext);
   					  g_code->codify(yytext);
 					}
 <RawString>{RAWEND}                     { 
@@ -2997,7 +3010,7 @@ printf("<Body line=%d SCOPENAME/B3 %s\n",g_yyLineNr,yytext);
                                           }
                                         }
 <RawString>[^)\n]+                      { g_code->codify(yytext); }
-<RawString>.                            { printf("<rawstring> %s\n",yytext);  g_code->codify(yytext); }
+<RawString>.                            { printf("<rawstring> yytext=%s\n",yytext);  g_code->codify(yytext); }
 <RawString>\n                           { codifyLines(yytext); }
 <SkipVerbString>[^"\n]+			{
   					  g_code->codify(yytext);
@@ -3011,13 +3024,13 @@ printf("<Body line=%d SCOPENAME/B3 %s\n",g_yyLineNr,yytext);
 					  BEGIN( g_lastVerbStringContext );
 					}
 <SkipVerbString>.			{
-  					 printf("<skipberbstring> %s\n",yytext);   g_code->codify(yytext);
+  					 printf("<skipberbstring> yytext=%s\n",yytext);   g_code->codify(yytext);
   					}
 <SkipVerbString>\n			{
   					  codifyLines(yytext);
   					}
 <Body>":"				{
-    printf("body009  %s Bool%d Case%d Else%d\n",yytext,g_currentMemberFlowInfoBool,g_currentMemberFlowInfoCase,g_currentMemberFlowInfoElse);
+    printf("body009  yytext=%s Bool%d Case%d Else%d\n",yytext,g_currentMemberFlowInfoBool,g_currentMemberFlowInfoCase,g_currentMemberFlowInfoElse);
                       if(TRUE == g_currentMemberFlowInfoCase ){ 
                           g_currentMemberFlowInfoBool = FALSE;
                           g_currentMemberFlowInfoCase = FALSE;
@@ -3028,7 +3041,7 @@ printf("<Body line=%d SCOPENAME/B3 %s\n",g_yyLineNr,yytext);
   					  g_name.resize(0);g_type.resize(0);
   					}
 <Body>"<"				{
-    printf("body010  %s\n",yytext);
+    printf("body010  yytext=%s\n",yytext);
                       if(TRUE == g_currentMemberFlowInfoBool ){ g_currentMemberFlowInfo.m_condition += yytext; }
   					  if (g_insideTemplate)
 					  {
@@ -3037,7 +3050,7 @@ printf("<Body line=%d SCOPENAME/B3 %s\n",g_yyLineNr,yytext);
   					  g_code->codify(yytext);
   					}
 <Body>">"				{
-    printf("body011  %s\n",yytext);
+    printf("body011  yytext=%s\n",yytext);
                       if(TRUE == g_currentMemberFlowInfoBool ){ g_currentMemberFlowInfo.m_condition += yytext; }
   					  if (g_insideTemplate)
 					  {
@@ -3049,13 +3062,13 @@ printf("<Body line=%d SCOPENAME/B3 %s\n",g_yyLineNr,yytext);
   					  g_code->codify(yytext);
   					}
 <Body,MemberCall,MemberCall2,FuncCall>"'"((\\0[Xx0-9]+)|(\\.)|(.))"'"	{
-    printf("<funcCall 4 %s\n",yytext);
+    printf("<funcCall 4 yytext=%s\n",yytext);
   					  startFontClass("charliteral"); 
   					  g_code->codify(yytext);
 					  endFontClass();
   					}
 <Body>"."|"->"				{ 
-    printf("body012  %s\n",yytext);
+    printf("body012  yytext=%s\n",yytext);
                       if(TRUE == g_currentMemberFlowInfoBool ){ g_currentMemberFlowInfo.m_condition += yytext; }
   				          if (yytext[0]=='-') // -> could be overloaded
 					  {
@@ -3066,7 +3079,7 @@ printf("<Body line=%d SCOPENAME/B3 %s\n",g_yyLineNr,yytext);
   					  BEGIN( MemberCall ); 
 					}
 <MemberCall>{SCOPETNAME}/{BN}*"(" 	{
-printf("<MemberCall SCOPENAME/BN %s Bool:%d bracket:%d\n",yytext,g_currentMemberFlowInfoBool,g_bracketCount);
+printf("<MemberCall SCOPENAME/BN yytext=%s Bool:%d bracket:%d\n",yytext,g_currentMemberFlowInfoBool,g_bracketCount);
                       if(TRUE == g_currentMemberFlowInfoBool ){ 
                             g_currentMemberFlowInfo.m_condition += yytext; 
                       } else {
@@ -3094,7 +3107,7 @@ printf("<MemberCall SCOPENAME/BN %s Bool:%d bracket:%d\n",yytext,g_currentMember
                         }
                         g_currentMemberDef->addFlowInfo(tempMemberFlowInfo);
                       }
-                      printf("<MemberCall SCOPENAME/BN %s m_condition[%s] bracket:%d\n",yytext,qPrint( g_currentMemberFlowInfo.m_condition),g_bracketCount);
+                      printf("<MemberCall SCOPENAME/BN yytext=%s m_condition[%s] bracket:%d\n",yytext,qPrint( g_currentMemberFlowInfo.m_condition),g_bracketCount);
                       //if( (g_bracketCount > 0) && (TRUE == g_currentMemberFlowInfoBool) ){ g_currentMemberFlowInfo.m_condition += yytext; }
 					  if (g_theCallContext.getScope())
 					  {
@@ -3124,7 +3137,7 @@ printf("<MemberCall SCOPENAME/BN %s Bool:%d bracket:%d\n",yytext,g_currentMember
 					  }
   					}
 <MemberCall>{SCOPENAME}/{B}*		{
-printf("<MemberCall SCOPENAME/B %s\n",yytext);
+printf("<MemberCall SCOPENAME/B yytext=%s\n",yytext);
                       if(TRUE == g_currentMemberFlowInfoBool ){ g_currentMemberFlowInfo.m_condition += yytext; }
 					  if (g_theCallContext.getScope())
 					  {
@@ -3147,7 +3160,7 @@ printf("<MemberCall SCOPENAME/B %s\n",yytext);
   					  BEGIN(g_memCallContext);
   					}
 <Body>[,=;\[]				{
-    printf("body013  %s\n",yytext);
+    printf("body013  yytext=%s\n",yytext);
                       if(TRUE == g_currentMemberFlowInfoBool ){ g_currentMemberFlowInfo.m_condition += yytext; }
                       g_currentMemberFlowInfoElse = FALSE;  // check the status of not "else if"
 					  if (g_insideObjC && *yytext=='[')
@@ -3283,7 +3296,7 @@ printf("<MemberCall SCOPENAME/B %s\n",yytext);
 <ObjCCallComment>"//"|"/*"        { g_currentCtx->comment+=yytext; }
 <ObjCCallComment>\n               { g_currentCtx->comment+=*yytext; }
 <ObjCCallComment>.                { 
-    printf("objCCallComment  %s\n",yytext);
+    printf("objCCallComment  yytext=%s\n",yytext);
     g_currentCtx->comment+=*yytext; }
 <ObjCCall>{ID}	                  {
                                     g_currentCtx->format+=escapeObject(yytext);
@@ -3332,7 +3345,7 @@ printf("<MemberCall SCOPENAME/B %s\n",yytext);
                                    }
 <ObjCCall,ObjCMName,ObjCSkipStr>{ID} { g_currentCtx->format+=escapeWord(yytext); }
 <ObjCCall,ObjCMName,ObjCSkipStr>.  { 
-    printf("objCCall %s\n",yytext);
+    printf("objCCall yytext=%s\n",yytext);
     g_currentCtx->format+=*yytext; }
 <ObjCCall,ObjCMName,ObjCSkipStr>\n { g_currentCtx->format+=*yytext; }
 
@@ -3344,17 +3357,17 @@ printf("<MemberCall SCOPENAME/B %s\n",yytext);
 					  g_type = g_saveType.copy();
 					}
 <Body>[0-9]+				{
-    printf("body014  %s\n",yytext);
+    printf("body014  yytext=%s\n",yytext);
                       if(TRUE == g_currentMemberFlowInfoBool ){ g_currentMemberFlowInfo.m_condition += yytext; }
 					  g_code->codify(yytext);
 					}
 <Body>[0-9]+[xX][0-9A-Fa-f]+		{
-    printf("body015  %s\n",yytext);
+    printf("body015  yytext=%s\n",yytext);
                       if(TRUE == g_currentMemberFlowInfoBool ){ g_currentMemberFlowInfo.m_condition += yytext; }
 					  g_code->codify(yytext);
 					}
 <MemberCall2,FuncCall>{KEYWORD}/([^a-z_A-Z0-9]) {
-    printf("FuncCall KEYWORD a-z %s\n",yytext);
+    printf("FuncCall KEYWORD a-z yytext=%s\n",yytext);
 					  //addParmType();
 					  //g_parmName=yytext; 
                                           if (skipLanguageSpecificKeyword(yytext)) REJECT;
@@ -3363,7 +3376,7 @@ printf("<MemberCall SCOPENAME/B %s\n",yytext);
 					  endFontClass();
 					}
 <MemberCall2,FuncCall,OldStyleArgs,TemplCast>{TYPEKW}/([^a-z_A-Z0-9]) {
-    printf("FuncCall KEYPEKW a-z %s\n",yytext);
+    printf("FuncCall KEYPEKW a-z yytext=%s\n",yytext);
 					  addParmType();
 					  g_parmName=yytext; 
   					  startFontClass("keywordtype");
@@ -3371,7 +3384,7 @@ printf("<MemberCall SCOPENAME/B %s\n",yytext);
 					  endFontClass();
 					}
 <MemberCall2,FuncCall,OldStyleArgs,TemplCast>{TYPEKWSL}/([^a-z_A-Z0-9]) {
-    printf("FuncCall TYPEKWSL a-z %s\n",yytext);
+    printf("FuncCall TYPEKWSL a-z yytext=%s\n",yytext);
                                           if (!g_insideSlice)
                                           {
                                             REJECT;
@@ -3386,7 +3399,7 @@ printf("<MemberCall SCOPENAME/B %s\n",yytext);
                                           }
 					}
 <MemberCall2,FuncCall>{FLOWKW}/([^a-z_A-Z0-9]) {
-    printf("FuncCall FLOWKW a-z %s\n",yytext);
+    printf("FuncCall FLOWKW a-z yytext=%s\n",yytext);
 					  addParmType();
 					  g_parmName=yytext; 
   					  startFontClass("keywordflow");
@@ -3394,7 +3407,7 @@ printf("<MemberCall SCOPENAME/B %s\n",yytext);
 					  endFontClass();
 					}
 <MemberCall2,FuncCall>{FLOWCONDITION}/([^a-z_A-Z0-9]) {
-                            printf("FuncCall FLOWCONDITION a-z %s\n",yytext);
+                            printf("FuncCall FLOWCONDITION a-z yytext=%s\n",yytext);
                                           if (g_currentMemberDef && g_currentMemberDef->isFunction())
                                           {
                                             g_currentMemberDef->addFlowKeyWord();
@@ -3406,28 +3419,28 @@ printf("<MemberCall SCOPENAME/B %s\n",yytext);
                                           endFontClass();
                                         }
 <MemberCall2,FuncCall>{ID}(({B}*"<"[^\n\[\](){}<>]*">")?({B}*"::"{B}*{ID})?)* {
-    printf("<funcCall ID %s\n",yytext);
+    printf("<funcCall ID yytext=%s\n",yytext);
                       if(TRUE == g_currentMemberFlowInfoBool ){ g_currentMemberFlowInfo.m_condition += yytext; }
 					  addParmType();
 					  g_parmName=yytext; 
 					  generateClassOrGlobalLink(*g_code,yytext,!g_insideBody);
 					}
 <FuncCall>";"				{ // probably a cast, not a function call
-    printf("<funcCall 5 %s\n",yytext);
+    printf("<funcCall 5 yytext=%s\n",yytext);
                       if(TRUE == g_currentMemberFlowInfoBool ){ g_currentMemberFlowInfo.m_condition += yytext; }
   					  g_code->codify(yytext);
 					  g_inForEachExpression = FALSE;
 					  BEGIN( Body );
   					}
 <MemberCall2,FuncCall>,			{
-                            printf("<FuncCall codify %s\n",yytext);
+                            printf("<FuncCall codify yytext=%s\n",yytext);
                       if(TRUE == g_currentMemberFlowInfoBool ){ g_currentMemberFlowInfo.m_condition += yytext; }
   					  g_code->codify(yytext);
 					  g_theVarContext.addVariable(g_parmType,g_parmName);
 					  g_parmType.resize(0);g_parmName.resize(0);
 					}
 <MemberCall2,FuncCall>"{"		{
-                            printf("FuncCall15 \{ %s\n",yytext);
+                            printf("FuncCall15 \{ yytext=%s\n",yytext);
                                           if (g_bracketCount>0)
                                           {
                                             g_code->codify(yytext);
@@ -3457,7 +3470,8 @@ printf("<MemberCall SCOPENAME/B %s\n",yytext);
                                           g_code->codify(yytext);
                                         }
 <MemberCall2,FuncCall>"("		{
-                            printf("FuncCall8 \( %s g_bracketCount=%d\n",yytext,g_bracketCount);
+                            printf("FuncCall8 \( yytext=%s g_bracketCount=%d\n",yytext,g_bracketCount);
+                            printf("FuncCall8 g_currentMemberDef=%p\n",g_currentMemberDef); if(g_currentMemberDef){ printf("def=%s\n",g_currentMemberDef->definition()); }
                       if(TRUE == g_currentMemberFlowInfoBool ){ g_currentMemberFlowInfo.m_condition += yytext; }
 					  g_parmType.resize(0);g_parmName.resize(0);
   					  g_code->codify(yytext);
@@ -3469,7 +3483,8 @@ printf("<MemberCall SCOPENAME/B %s\n",yytext);
 					  }
 					}
 <MemberCall2,FuncCall>{OPERATOR}        { // operator
-                            printf("FuncCall OPERATOR %s\n",yytext);
+                            printf("FuncCall OPERATOR yytext=%s\n",yytext);
+                            printf("FuncCall8 g_currentMemberDef=%p\n",g_currentMemberDef); if(g_currentMemberDef){ printf("def=%s\n",g_currentMemberDef->definition()); }
                       if(TRUE == g_currentMemberFlowInfoBool ){ g_currentMemberFlowInfo.m_condition += yytext; }
   					  if (qstrcmp(yytext,"*") && 
 					      qstrcmp(yytext,"&") &&
@@ -3482,7 +3497,8 @@ printf("<MemberCall SCOPENAME/B %s\n",yytext);
   					  g_code->codify(yytext);
   					}
 <MemberCall,MemberCall2,FuncCall>("*"{B}*)?")"	{ 
-                            printf("<FuncCall B? %s g_bracketCount=%d\n",yytext,g_bracketCount);
+                            printf("<FuncCall B? yytext=%s g_bracketCount=%d\n",yytext,g_bracketCount);
+                            printf("FuncCall8 g_currentMemberDef=%p\n",g_currentMemberDef); if(g_currentMemberDef){ printf("def=%s\n",g_currentMemberDef->definition()); }
                                           if (yytext[0]==')') // no a pointer cast
                                           {
                                             //printf("addVariable(%s,%s)\n",g_parmType.data(),g_parmName.data());
@@ -3672,7 +3688,7 @@ printf("<MemberCall SCOPENAME/B %s\n",yytext);
 					  BEGIN( SkipCPP );
   					}
 <CallEnd>.				{
-    printf("<callend> %s\n",yytext);
+    printf("<callend> yytext=%s\n",yytext);
   					  unput(*yytext);
                                           if (!g_insideBody) 
 					  {
@@ -3713,19 +3729,19 @@ printf("<MemberCall SCOPENAME/B %s\n",yytext);
 					  generateClassOrGlobalLink(*g_code,yytext);
   					}
 <FuncCall>{ID}/"("			{
-    printf("FuncCall11 ID \(  %s\n",yytext);
+    printf("FuncCall11 ID \(  yytext=%s\n",yytext);
                       if(TRUE == g_currentMemberFlowInfoBool ){ g_currentMemberFlowInfo.m_condition += yytext; }
 					  generateFunctionLink(*g_code,yytext);
 					}
 <FuncCall>{ID}/("."|"->")               { 
-    printf("FuncCall12 ID ->  %s\n",yytext);
+    printf("FuncCall12 ID ->  yytext=%s\n",yytext);
                       if(TRUE == g_currentMemberFlowInfoBool ){ g_currentMemberFlowInfo.m_condition += yytext; }
 					  g_name=yytext; 
 					  generateClassOrGlobalLink(*g_code,yytext);
 					  BEGIN( MemberCall2 ); 
 					}
 <FuncCall,MemberCall2>("("{B}*("*"{B}*)+{ID}*{B}*")"{B}*)/("."|"->") { 
-    printf("MemberCall2 BIDB %s\n",yytext);
+    printf("MemberCall2 BIDB yytext=%s\n",yytext);
   					  g_code->codify(yytext);
 					  int s=0;while (!isId(yytext[s])) s++;
                                           int e=(int)yyleng-1;while (!isId(yytext[e])) e--;
@@ -3733,7 +3749,7 @@ printf("<MemberCall SCOPENAME/B %s\n",yytext);
 					  BEGIN( MemberCall2 ); 
 					}
 <MemberCall2>{ID}/([ \t\n]*"(")         { 
-    printf("MemberCall2 ID %s\n",yytext);
+    printf("MemberCall2 ID yytext=%s\n",yytext);
   					  if (!g_args.isEmpty())
 					    generateMemberLink(*g_code,g_args,yytext);
 					  else
@@ -3742,14 +3758,14 @@ printf("<MemberCall SCOPENAME/B %s\n",yytext);
 					  BEGIN( FuncCall );
 					}
 <MemberCall2>{ID}/([ \t\n]*("."|"->"))  {
-    printf("MemberCall2 ID-> %s\n",yytext);
+    printf("MemberCall2 ID-> yytext=%s\n",yytext);
   					  //g_code->codify(yytext);
 					  g_name=yytext; 
 					  generateClassOrGlobalLink(*g_code,yytext);
 					  BEGIN( MemberCall2 ); 
     					}
 <MemberCall2>"->"|"."			{
-    printf("MemberCall2 -> %s\n",yytext);
+    printf("MemberCall2 -> yytext=%s\n",yytext);
                       if(TRUE == g_currentMemberFlowInfoBool ){ g_currentMemberFlowInfo.m_condition += yytext; }
   				          if (yytext[0]=='-') // -> could be overloaded
 					  {
@@ -3792,7 +3808,7 @@ printf("<MemberCall SCOPENAME/B %s\n",yytext);
 					  BEGIN( g_lastCContext ) ;
   					}
 <SkipCxxComment>.			{
-    printf("<skipcxxcomment> %s\n",yytext);
+    printf("<skipcxxcomment> yytext=%s\n",yytext);
   					  g_code->codify(yytext);
   					}
 <RemoveSpecialCComment>"*/"{B}*\n({B}*\n)*({B}*(("//@"[{}])|("/*@"[{}]"*/")){B}*\n)?{B}*"/*"[*!]/[^/*] {
@@ -3825,7 +3841,7 @@ printf("<MemberCall SCOPENAME/B %s\n",yytext);
 					  BEGIN(g_memCallContext); 
 					}
 <*>\n({B}*"//"[!/][^\n]*\n)+		{ // remove special one-line comment
-printf("<*> special %s\n",yytext);
+printf("<*> special yytext=%s\n",yytext);
 					  if (YY_START==SkipCPP) REJECT;
   					  if (Config_getBool(STRIP_CODE_COMMENTS))
 					  {
@@ -3845,13 +3861,13 @@ printf("<*> special %s\n",yytext);
 					  }
   					}
 <SkipCPP>\n/.*\n			{ 
-    printf("<skipcpp %s\n",yytext);
+    printf("<skipcpp yytext=%s\n",yytext);
 					  endFontClass();
   					  codifyLines(yytext);
 					  BEGIN( g_lastSkipCppContext ) ;
 					}
 <*>\n{B}*"//@"[{}].*\n			{ // remove one-line group marker
-printf("<*> // %s\n",yytext);
+printf("<*> // yytext=%s\n",yytext);
   					  if (Config_getBool(STRIP_CODE_COMMENTS))
 					  {
 					    g_yyLineNr+=2;
@@ -3870,7 +3886,7 @@ printf("<*> // %s\n",yytext);
 					  }
   					}
 <*>\n{B}*"/*@"[{}]			{ // remove one-line group marker
-printf("<*>n /*@ %s\n",yytext);
+printf("<*>n /*@ yytext=%s\n",yytext);
 					  if (Config_getBool(STRIP_CODE_COMMENTS))
   					  {
 					    g_lastSpecialCContext = YY_START;
@@ -3890,7 +3906,7 @@ printf("<*>n /*@ %s\n",yytext);
   					  }
   					}
 <*>^{B}*"//@"[{}].*\n			{ // remove one-line group marker
-printf("<*> //@ %s\n",yytext);
+printf("<*> //@ yytext=%s\n",yytext);
   					  if (Config_getBool(STRIP_CODE_COMMENTS))
 					  {
 					    g_yyLineNr++;
@@ -3904,7 +3920,7 @@ printf("<*> //@ %s\n",yytext);
 					  }
   					}
 <*>^{B}*"/*@"[{}]			{ // remove multi-line group marker
-printf("<*> /*@ %s\n",yytext);
+printf("<*> /*@ yytext=%s\n",yytext);
 					  if (Config_getBool(STRIP_CODE_COMMENTS))
 					  {
 					    g_lastSpecialCContext = YY_START;
@@ -3923,7 +3939,7 @@ printf("<*> /*@ %s\n",yytext);
  					  }
   					}
 <*>^{B}*"//"[!/][^\n]*\n		{ // remove special one-line comment
-printf("<*>^ // %s\n",yytext);
+printf("<*>^ // yytext=%s\n",yytext);
   					  if (Config_getBool(STRIP_CODE_COMMENTS))
 					  {
 					    g_yyLineNr++;
@@ -3937,7 +3953,7 @@ printf("<*>^ // %s\n",yytext);
 					  }
   					}
 <*>"//"[!/][^\n]*\n			{ // strip special one-line comment
-printf("<*>2 // %s\n",yytext);
+printf("<*>2 // yytext=%s\n",yytext);
                                           if (YY_START==SkipComment || YY_START==SkipString) REJECT;
   					  if (Config_getBool(STRIP_CODE_COMMENTS))
 					  {
@@ -3952,14 +3968,14 @@ printf("<*>2 // %s\n",yytext);
 					  }
   					}
 <*>"/*[tag:"[^\]\n]*"]*/"{B}*		{ // special pattern /*[tag:filename]*/ to force linking to a tag file
-printf("<*>tag // %s\n",yytext);
+printf("<*>tag // yytext=%s\n",yytext);
   					  g_forceTagReference=yytext;
 					  int s=g_forceTagReference.find(':');
 					  int e=g_forceTagReference.findRev(']');
 					  g_forceTagReference = g_forceTagReference.mid(s+1,e-s-1);
   					}
 <*>\n{B}*"/*"[!*]/[^/*] 		{
-printf("<*>3 // %s\n",yytext);
+printf("<*>3 // yytext=%s\n",yytext);
 					  if (Config_getBool(STRIP_CODE_COMMENTS))
   					  {
 					    g_lastSpecialCContext = YY_START;
@@ -3979,7 +3995,7 @@ printf("<*>3 // %s\n",yytext);
   					  }
 					}
 <*>^{B}*"/*"[!*]/[^/*]			{ // special C comment block at a new line
-printf("<*>3 /* %s\n",yytext);
+printf("<*>3 /* yytext=%s\n",yytext);
 					  if (Config_getBool(STRIP_CODE_COMMENTS))
 					  {
 					    g_lastSpecialCContext = YY_START;
@@ -3998,7 +4014,7 @@ printf("<*>3 /* %s\n",yytext);
  					  }
 					}
 <*>"/*"[!*]/[^/*]			{ // special C comment block half way a line
-printf("<*>4 /* %s\n",yytext);
+printf("<*>4 /* yytext=%s\n",yytext);
                                           if (YY_START==SkipString) REJECT;
 					  if (Config_getBool(STRIP_CODE_COMMENTS))
 					  {
@@ -4018,7 +4034,7 @@ printf("<*>4 /* %s\n",yytext);
 					  }
 					}
 <*>"/*"("!"?)"*/"			{ 
-printf("<*>5 /* %s\n",yytext);
+printf("<*>5 /* yytext=%s\n",yytext);
                                           if (YY_START==SkipString) REJECT;
                                           if (YY_START==SkipString) REJECT;
                                           if (!Config_getBool(STRIP_CODE_COMMENTS))
@@ -4054,12 +4070,12 @@ printf("<*>5 /* %s\n",yytext);
 					  BEGIN( SkipCxxComment ) ;
 					}
 <*>"("|"["					{
-printf("<*>5 ([  %s\n",yytext);
+printf("<*>5 ([  yytext=%s\n",yytext);
   					  g_code->codify(yytext);
 					  g_theCallContext.pushScope();
   					}
 <*>")"|"]"					{
-printf("<*>5 )]  %s\n",yytext);
+printf("<*>5 )]  yytext=%s\n",yytext);
   					  g_code->codify(yytext);
 					  g_theCallContext.popScope();
   					}
@@ -4068,7 +4084,7 @@ printf("<*>5 )]  %s\n",yytext);
   					  codifyLines(yytext); 
   					}
 <*>.					{
-printf("<*>8 . %s\n",yytext);
+printf("<*>8 . yytext=%s\n",yytext);
                       if(TRUE == g_currentMemberFlowInfoBool ){ g_currentMemberFlowInfo.m_condition += yytext; }
 					  g_yyColNr++;
   					  g_code->codify(yytext);
@@ -4228,7 +4244,7 @@ void parseCCode(CodeOutputInterface &od,const char *className,const QCString &s,
     //printf("g_exampleFile=%s\n",g_exampleFile.data());
   }
   g_includeCodeFragment = inlineFragment;
-  //printf("** exBlock=%d exName=%s include=%d\n",exBlock,exName,inlineFragment);
+  printf("** exBlock=%d exName=%s include=%d\n",exBlock,exName,inlineFragment);
   startCodeLine();
   g_type.resize(0);
   g_name.resize(0);

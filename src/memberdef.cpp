@@ -5116,11 +5116,21 @@ void MemberDef::invalidateCachedArgumentTypes()
 
 void MemberDef::addFlowInfo(MemberFlowInfo mfi)
 {
+    printf("addFlowInfo mfi[%p] \n",mfi);
+    printf("addFlowInfo m_impl[%p]\n",m_impl);
   MemberFlowInfo* cpmfi = new MemberFlowInfo(mfi);
-  //printf("[ADDFLOW] func:%s flow:%s has:%d depth:%d f:%s l:%d cond:%s\n",declaration(),mfi.getFlowString(),mfi.m_hasCondition,mfi.m_depth,qPrint(mfi.m_filename),mfi.m_lineNr,qPrint(mfi.m_condition));
+  printf("[ADDFLOW] func:%s\n",declaration());
+  printf("[ADDFLOW] flow:%s \n",mfi.getFlowString());
+  printf("[ADDFLOW] cpmfi[%p]\n",cpmfi);
+  printf("[ADDFLOW] has:%d \n",mfi.m_hasCondition);
+  printf("[ADDFLOW] depth:%d \n",mfi.m_depth);
+  printf("[ADDFLOW] f:%s \n",qPrint(mfi.m_filename));
+  printf("[ADDFLOW] l:%d \n",cpmfi->m_lineNr);
+  printf("[ADDFLOW] cond:%s\n",qPrint(cpmfi->m_condition));
   //mfi.setFlow(flowString);
   m_flowInfo.append(cpmfi);
-  printf("[ADDFLOW] func:%s flow:%s has:%d depth:%d f:%s l:%d cond:%s\n",declaration(),cpmfi->getFlowString(),cpmfi->m_hasCondition,cpmfi->m_depth,qPrint(cpmfi->m_filename),cpmfi->m_lineNr,qPrint(cpmfi->m_condition));
+    printf("addFlowInfo %p\n",mfi);
+  //printf("[ADDFLOW] func:%s flow:%s has:%d depth:%d f:%s l:%d cond:%s\n",declaration(),cpmfi->getFlowString(),cpmfi->m_hasCondition,cpmfi->m_depth,qPrint(cpmfi->m_filename),cpmfi->m_lineNr,qPrint(cpmfi->m_condition));
   //m_flowInfo.insert(index,&mfi);
 
   QListIterator<MemberFlowInfo> mfil(m_flowInfo);
