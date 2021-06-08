@@ -2,6 +2,9 @@
 - it is not sufficient for doxygen. But , I make this edition (version) briefly to help fast.
 - Use this function when you make a flow chart for ASPICE.
 
+# detailed explanation
+- https://github.com/cheoljoo/doxygen/blob/FlowChart_SequenceDiagram/src/doxygen_parse.md
+
 ## result example [test/a.cpp](https://github.com/cheoljoo/doxygen/blob/FlowChart_SequenceDiagram/test/a.cpp)
 
 - This is auto-generated result ( visual studio code) in function : ClassA::classAfunc() from simple source code.
