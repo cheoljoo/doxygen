@@ -31,7 +31,7 @@
     - generated result : plantuml.md 
 - Try with your code!!!
 
-### how to use it with your source codes
+## how to use it with your source codes
 - cd test
 - doxygen
     - a.cpp is examaple
