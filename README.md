@@ -31,6 +31,26 @@
     - generated result : plantuml.md 
 - Try with your code!!!
 
+### how to use it
+- cd test
+- doxygen
+    - a.cpp is examaple
+- if you want to use your files.
+    - only use cpp file.
+    - **but this cpp file should include your headerfile contents.**
+``` exmaple.cpp
+// header contents
+class TT { 
+    ...
+    A()
+};
+
+// cpp contents
+TT::A()
+{
+}
+```
+
 ## how to show the result (plantuml.md)
 - this is plantuml file
 - you can show the result with **vcode** or atom editor ( need "markdown preview enhanced" plugin)
