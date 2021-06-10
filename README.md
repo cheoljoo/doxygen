@@ -19,7 +19,7 @@
 
 	- It gives the detailed branch counts (# of test cases) with flow charts.  
 
-## how to run
+## how to compile and run
 
 - doxygen compile 
     - ```git clone -b  FlowChart_SequenceDiagram  https://github.com/cheoljoo/doxygen.git```
@@ -31,7 +31,7 @@
     - generated result : plantuml.md 
 - Try with your code!!!
 
-### how to use it
+### how to use it with your source codes
 - cd test
 - doxygen
     - a.cpp is examaple
